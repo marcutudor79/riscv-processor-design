@@ -1,12 +1,9 @@
 name: LateX CV to PDF
 
-on:
-  push:
-    branches: 
-      - main
-  pull_request:
-    branches: [ master ]
+# run on any push, any branch
+on: [push]
 
+# job to run, ref: https://github.com/thomas-chauvet/cv_latex/blob/main/.github/workflows/latex2pdf.yml
 jobs:
   build_latex:
     runs-on: ubuntu-latest
