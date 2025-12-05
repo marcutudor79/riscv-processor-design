@@ -4,9 +4,17 @@ curriculum. The purpose of it is to design and implement a simple riscv based sp
 of a processor.
 
 # Contents
+- [Timeline](#timeline)
 - [How to setup project](#how-to-setup-for-the-project)
 - [Project contents](#project-contents)
 - [Who contributed](#who-contributed)
+
+# Timeline
+- [🔴] Finish 1st task: December 12
+- [🔴] Finish 2nd task: December 19
+- [🔴] Finish 3rd task: December 26
+- [🔴] Finish 4th task: December 30
+- [🔴] Deadline: January 12, 2026 (23:55)
 
 # How to setup for the project
 1. Install ```LaTeX Workshop``` extension in VSCode
