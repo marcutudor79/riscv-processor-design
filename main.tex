@@ -1,10 +1,13 @@
 \documentclass{article}
-\usepackage{graphicx} % Required for inserting images
-\usepackage{booktabs}
+\usepackage{graphicx}                            % Required for inserting images
+\usepackage{booktabs}                            % Required for tables
+\usepackage[a4paper, total={6in, 8in}]{geometry} % Adjust page margins
+\usepackage{hyperref}                            % Clickable links
 
-\title{My First LaTeX Document}
-\author{Unknown}
-\date{December 2025}
+
+\title{Project 1 Exectuion Platforms}
+\author{Hamden Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
+\date{January 2025}
 
 \begin{document}
 
@@ -12,20 +15,31 @@
 
 \section{Introduction}
 
+This is the program listing for the RISC-V assembly code example with the hex instructions and their
+binary field breakdowns. By using a website "https://projectf.io/posts/riscv-cheat-sheet/" \cite{exampleWebsite}
+
 \begin{table}[ht]
 \centering
-\caption{Example Table}
+\caption{Code listing with hex instructions and binary fields}
 \label{tab:example}
 \begin{tabular}{lll}
 \toprule
-Hex instruction & Binary instruction & Opcode \\
+Hex instruction & Binary fields & Instruction \\
 \midrule
-0x00050893 & 00000000000001010000100010010011 & -- \\
-0x00068513 & 00000000000001101000010100010011 & -- \\
-0x04088063 & 00000100000010001000000001100011 & -- \\
-0x04058263 & 00000100000001011000001001100011 & -- \\
-0x04060063 & 00000100000001100000000000000011 & -- \\
-0x04d05063 & 00000100110100000101000001100011 & -- \\
+           & fnc7 \ \ \ \ \ \ \ \ \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ rd \ \ \ \ \ op1 & \\
+0x00050893 & 000000000000 ; 01010 ; 000 ; 10001 ; 0010011
+           & addi a8 a17 0 - error in format\\
+           & fnc7 \ \ \ \ \ \ \ \ \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ rd \ \ \ \ \ op1 & \\
+0x00068513 & 000000000000 ; 01101 ; 000 ; 01010 ; 0010011
+           & addi a13 a8 0 - error in format \\
+           & imm \ \ \ \ \ \ rs2 \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ imm \ \ \ \ \ op1 & \\
+0x04088063 & 0000010 ; 00000 ; 10001 ; 000 ; 00000 ; 1100011 & beq a0 a17 0xA0 - error in jmp calc <1 \\
+           & imm \ \ \ \ \ \ rs2 \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ imm \ \ \ \ \ op1 & \\
+0x04058263 & 0000010 ; 00000 ; 01011 ; 000 ; 00100 ; 1100011 & beq a0 a1 0x22 - error in jmp calc \\
+           & imm \ \ \ \ \ \ \ \ \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ rd \ \ \ \ \ op1 & \\
+0x04060063 & 000001000000 ; 01100 ; 000 ; 00000 ; 0000011 & addi a0, a12, 0x64 \\
+           & imm \ \ \ \ \ \ rs2 \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ imm \ \ \ \ \ op1 & \\
+0x04d05063 & 0000010011010000; 101; 00000; 1100011 & bge  , a0 \\
 0x00088793 & 00000000000010001000011110010011 & -- \\
 0x00269713 & 00000000001001101001011100010011 & -- \\
 0x00e888b3 & 00000000111010001000100010110011 & -- \\
@@ -45,6 +59,10 @@ Hex instruction & Binary instruction & Opcode \\
 \bottomrule
 \end{tabular}
 \end{table}
+
+
+\bibliographystyle{plain}   % choose a style
+\bibliography{ref}          % name of .bib file (no .bib extension)
 
 
 \end{document}
