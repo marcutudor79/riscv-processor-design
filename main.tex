@@ -74,8 +74,38 @@ deffered until the delay slot instruction is executed.
 Advantages of using branch delay slots include improved performance in pipelined architectures, since
 it helps to reduce the number of pipeline stalls caused by branch instructions.
 
+In order to understand better the provided program, it is useful to check the branch instructions and
+where they lead to.
 
+\begin{table}[ht]
+\centering
 
+\label{tab:example}
+\begin{tabular}{ccc}
+\toprule
+Mem Address & Conditional branch instruction & Branch to \\
+\midrule
+
+0x08 & beq a7, zero, 64  & 0x48: addi a0, zero, -1 \\
+0xc  & beq a1, zero, 68  & 0x50: addi a0, zero, -1 \\
+0x10 & beq a2, zero, 64  & 0x50: addi a0, zero, -1 \\
+0x14 & bge zero, a3, 148 & 0xA8: ? \\
+0x40 & bne a5, a7, -16   & 0x30: sw a4, 0(a2) \\
+
+\bottomrule
+\end{tabular}
+\caption{Conditional Branch Instructions}
+\end{table}
+
+The function provided is summing up the elements of two arrays until the end of one of the arrays is
+reached. The function will return -1 if one of the arrays has 0 elements, otherwise it will return
+0 upon successful completion.
+
+\newpage
+\section{RISC-V Tool Chain}
+To be done.
+
+\newpage % keep bibliography on a new page
 \bibliographystyle{plain}   % choose a style
 \bibliography{ref}          % name of .bib file (no .bib extension)
 
