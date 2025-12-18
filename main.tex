@@ -13,49 +13,43 @@
 
 \maketitle
 
-\section{Introduction}
+\section{Introduction to RISC-V Instruction Set Architecture}
 
-This is the program listing for the RISC-V assembly code example with the hex instructions and their
-binary field breakdowns. By using a website "https://projectf.io/posts/riscv-cheat-sheet/" \cite{exampleWebsite}
+In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction
+and its binary fields. Based on the cheat sheet provided in the assignment description \cite{PR1-SE201-21},
+a Table 1 is provided in order to give the instruction format, register numbers and their symbolic name.
 
 \begin{table}[ht]
 \centering
 \caption{Code listing with hex instructions and binary fields}
 \label{tab:example}
-\begin{tabular}{lll}
+\begin{tabular}{ccccc}
 \toprule
-Hex instruction & Binary fields & Instruction \\
+Mem Address & Hex Instruction & Format & Binary Instruction & ASM Instruction \\
 \midrule
-           & fnc7 \ \ \ \ \ \ \ \ \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ rd \ \ \ \ \ op1 & \\
-0x00050893 & 000000000000 ; 01010 ; 000 ; 10001 ; 0010011
-           & addi a8 a17 0 - error in format\\
-           & fnc7 \ \ \ \ \ \ \ \ \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ rd \ \ \ \ \ op1 & \\
-0x00068513 & 000000000000 ; 01101 ; 000 ; 01010 ; 0010011
-           & addi a13 a8 0 - error in format \\
-           & imm \ \ \ \ \ \ rs2 \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ imm \ \ \ \ \ op1 & \\
-0x04088063 & 0000010 ; 00000 ; 10001 ; 000 ; 00000 ; 1100011 & beq a0 a17 0xA0 - error in jmp calc <1 \\
-           & imm \ \ \ \ \ \ rs2 \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ imm \ \ \ \ \ op1 & \\
-0x04058263 & 0000010 ; 00000 ; 01011 ; 000 ; 00100 ; 1100011 & beq a0 a1 0x22 - error in jmp calc \\
-           & imm \ \ \ \ \ \ \ \ \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ rd \ \ \ \ \ op1 & \\
-0x04060063 & 000001000000 ; 01100 ; 000 ; 00000 ; 0000011 & addi a0, a12, 0x64 \\
-           & imm \ \ \ \ \ \ rs2 \ \ \ \ \ \ rs1 \ \ \ \ \ fnc3 \ \ \ imm \ \ \ \ \ op1 & \\
-0x04d05063 & 0000010011010000; 101; 00000; 1100011 & bge  , a0 \\
-0x00088793 & 00000000000010001000011110010011 & -- \\
-0x00269713 & 00000000001001101001011100010011 & -- \\
-0x00e888b3 & 00000000111010001000100010110011 & -- \\
-0x0007a703 & 00000000000001111010011100000011 & -- \\
-0x0005a803 & 00000000000001011010100000000011 & -- \\
-0x01070733 & 00000001000001110000011100110011 & -- \\
-0x00e62023 & 00000000111001100010000000100011 & -- \\
-0x00478793 & 00000000010001111000011110010011 & -- \\
-0x00458593 & 00000000010001011000010110010011 & -- \\
-0x00460613 & 00000000010001100000011000010011 & -- \\
-0xff1792e3 & 11111111000101111001001011100011 & -- \\
-0x00008067 & 00000000000000001000000001100111 & -- \\
-0xfff00513 & 11111111111100000000010100010011 & -- \\
-0x00008067 & 00000000000000001000000001100111 & -- \\
-0xfff00513 & 11111111111100000000010100010011 & -- \\
-0x00008067 & 00000000000000001000000001100111 & -- \\
+
+0x0  & 0x00050893 & I  & 00000000000001010000100010010011 & addi a7, a0, 0 \\
+0x4  & 0x00068513 & I  & 00000000000001101000010100010011 & addi a0, a3, 0 \\
+0x8  & 0x04088063 & SB & 00000100000010001000000001100011 & beq a7, zero, 64 \\
+0xc  & 0x04058263 & SB & 00000100000001011000001001100011 & beq a1, zero, 68 \\
+0x10 & 0x04060063 & SB & 00000100000001011000001001100011 & beq a2, zero, 64 \\
+0x14 & 0x04d05063 & SB & 00000100110100000101000001100011 & bge zero, a3, 148 \\
+0x18 & 0x00088793 & I  & 00000000000010001000011110010011 & addi a5, a7, 0 \\
+0x1c & 0x00269713 & I  & 00000000001001101001011100010011 & addi a4, a3, 2 \\
+0x20 & 0x00e888b3 & R  & 00000000111010001000100010110011 & add a7, a7, a4 \\
+0x24 & 0x0007a703 & I  & 00000000111010001000100010110011 & lw a4, 0(a5) \\
+0x28 & 0x0005a803 & I  & 00000000000001011010100000000011 & lw a6, 0(a1) \\
+0x2c & 0x01070733 & R  & 00000001000001110000011100110011 & add a4, a4, a6 \\
+0x30 & 0x00e62023 & S  & 00000000111001100010000000100011 & sw a4, 0(a2) \\
+0x34 & 0x00478793 & I  & 00000000010001111000011110010011 & addi a5, a5, 4 \\
+0x38 & 0x00458593 & I  & 00000000010001011000010110010011 & addi a1, a1, 4 \\
+0x3c & 0x00460613 & I  & 00000000010001100000011000010011 & addi a2, a2, 4 \\
+0x40 & 0xff1792e3 & SB & 11111111000101111001001011100011 & bne a5, a7, -16 \\
+0x44 & 0x00008067 & I  & 00000000000000001000000001100111 & jalr zero, ra, 0 \\
+0x48 & 0xfff00513 & I  & 11111111111100000000010100010011 & addi a0, zero, -1 \\
+0x4c & 0x00008067 & I  & 00000000000000001000000001100111 & jalr zero, ra, 0 \\
+0x50 & 0xfff00513 & I  & 11111111111100000000010100010011 & addi a0, zero, -1 \\
+0x54 & 0x00008067 & I  & 00000000000000001000000001100111 & jalr zero, ra, 0 \\
 \bottomrule
 \end{tabular}
 \end{table}
