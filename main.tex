@@ -24,7 +24,10 @@
 \section{Introduction to RISC-V Instruction Set Architecture}
 
 In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction
-and its binary fields. Based on the cheat sheet provided in the assignment description \cite{PR1-SE201-21},
+and its binary fields.
+
+\subsection{Program Instructions Decomposition}
+Based on the cheat sheet provided in the assignment description \cite{PR1-SE201-21},
 a Table 1 is provided in order to give the instruction format, register numbers and their symbolic name.
 
 \begin{table}[H]
@@ -108,13 +111,13 @@ a Table 1 is provided in order to give the instruction format, register numbers 
 \end{tabular}
 \end{table}
 
-
+\subsection{Branch Delay Slot Concept}
 The branch delay slot concept is interesting when discussing pipelined processors. Esentially, when
 a branch instruction is taken, the instructions that were fetched after the branch instructions might
-become invalid, if the branch is taken. Therefore, the branch delay slot declares that the instruction
+become invalid, if the branch is taken. To avoid this, the branch delay slot declares that the instruction
 immediately following a branch instruction is always executed, regardless of whether the branch is taken
-or not. This helps to mitigate the performance penalty associated with branch instructions in pipelined
-architecture. As explained in \cite{Stack-overflow-branch-delay}: "The idea of the branch shadow or delay slot is to recover one of those clocks. If you declare that
+or not. This helps to mitigate the performance penalty associated with branch instructions.
+As explained in \cite{Stack-overflow-branch-delay}: "The idea of the branch shadow or delay slot is to recover one of those clocks. If you declare that
 the instruction after a branch is always executed then when a branch is taken the instruction in
 the decode slot also gets executed, the instruction in the fetch slot is discarded and you have one
 hole of time not two. So instead of execute, empty, empty, execute, execute you now have execute,
@@ -129,6 +132,7 @@ deffered until the delay slot instruction is executed.
 Advantages of using branch delay slots include improved performance in pipelined architectures, since
 it helps to reduce the number of pipeline stalls caused by branch instructions.
 
+\subsection{Branch Instructions Analysis}
 In order to understand better the provided program, it is useful to check the branch instructions and
 where they lead to.
 
@@ -153,6 +157,13 @@ where they lead to.
 \hline
 \end{tabular}
 \end{table}
+
+F D E W
+b
+nop b
+a nop b
+a a nop
+\subsection{Program Functionality}
 
 The function provided is summing up the elements of two arrays until the end of one of the arrays is
 reached. The function will return -1 if one of the arrays has 0 elements, otherwise it will return
