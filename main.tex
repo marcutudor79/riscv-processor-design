@@ -23,57 +23,60 @@
 
 \section{Introduction to RISC-V Instruction Set Architecture}
 
-In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction
-and its binary fields.
+In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
+The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
+detailed translation of each instruction from it's hex code to it's format fields. Some of them
+not used in certain instruction types, and are marked with a dash (-) in the table. The ultimate factor
+that determines the instruction type is the "Type" column, which indicates instruction format label
+R, I, S or SB.
 
 \subsection{Program Instructions Decomposition}
-Based on the cheat sheet provided in the assignment description \cite{PR1-SE201-21},
-a Table 1 is provided in order to give the instruction format, register numbers and their symbolic name.
-
 \begin{table}[H]
 \raggedright
-\caption{Decomposition of RISC-V instructions}
 \label{tab:instruction-decomposition}
 \vspace{0.3cm}
 \renewcommand{\arraystretch}{2}
 \begin{adjustbox}{width=\textwidth, center}
-\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
 \rowcolor{blue!20}
-\textbf{Instr.} & \textbf{Opcode (6:0)} & \textbf{rd (11:7)} & \textbf{funct3 (14:12)} & \textbf{rs1 (19:15)} & \textbf{rs2 (24:20)} & \textbf{funct7 (31:25)} & \textbf{imm[11:0] (31:20)} & \textbf{imm[11:5] (31:25)} & \textbf{imm[4:0] (11:7)} & \textbf{Type} \\
+\textbf{Address} & \textbf{Hex Code} & \textbf{Opcode (6:0)} & \textbf{rd (11:7)} & \textbf{funct3 (14:12)} & \textbf{rs1 (19:15)} & \textbf{rs2 (24:20)} & \textbf{funct7 (31:25)} & \textbf{imm[11:0] (31:20)} & \textbf{imm[11:5] (31:25)} & \textbf{imm[4:0] (11:7)} & \textbf{Type} \\
 \hline
-0x00050893 & 0010011 & 10001 & 000 & 01010 & - & - & 000000000000 & 0000000 & 10001 & I \\
-0x00068513 & 0010011 & 01010 & 000 & 01101 & - & - & 000000000000 & 0000000 & 01010 & I \\
-0x04088063 & 1100011 & - & 000 & 10001 & 00000 & - & - & 0000010 & 00000 & SB \\
-0x04058263 & 1100011 & - & 000 & 01011 & 00000 & - & - & 0000010 & 00100 & SB \\
-0x04060063 & 1100011 & - & 000 & 01100 & 00000 & - & - & 0000010 & 00000 & SB \\
-0x04d05063 & 1100011 & - & 101 & 00000 & 01101 & - & - & 0000010 & 00000 & SB \\
-0x00088793 & 0010011 & 01111 & 000 & 10001 & - & - & 000000000000 & 0000000 & 01111 & I \\
-0x00269713 & 0010011 & 01110 & 001 & 01101 & - & - & 000000000010 & 0000000 & 01110 & I \\
-0x00e888b3 & 0110011 & 10001 & 000 & 10001 & 01110 & 0000000 & - & 0000000 & 10001 & R \\
-0x0007a703 & 0000011 & 01110 & 010 & 01111 & - & - & 000000000000 & 0000000 & 01110 & I \\
-0x0005a803 & 0000011 & 10000 & 010 & 01011 & - & - & 000000000000 & 0000000 & 10000 & I \\
-0x01070733 & 0110011 & 01110 & 000 & 01110 & 10000 & 0000000 & - & 0000000 & 01110 & R \\
-0x00e62023 & 0100011 & - & 010 & 01100 & 01110 & - & - & 0000000 & 00000 & S \\
-0x00478793 & 0010011 & 01111 & 000 & 01111 & - & - & 000000000100 & 0000000 & 01111 & I \\
-0x00458593 & 0010011 & 01011 & 000 & 01011 & - & - & 000000000100 & 0000000 & 01011 & I \\
-0x00460613 & 0010011 & 01100 & 000 & 01100 & - & - & 000000000100 & 0000000 & 01100 & I \\
-0xff1792e3 & 1100011 & - & 001 & 01111 & 10001 & - & - & 1111111 & 00101 & SB \\
-0x00008067 & 1100111 & 00000 & 000 & 00001 & - & - & 000000000000 & 0000000 & 00000 & I \\
-0xfff00513 & 0010011 & 01010 & 000 & 00000 & - & - & 111111111111 & 1111111 & 01010 & I \\
-0x00008067 & 1100111 & 00000 & 000 & 00001 & - & - & 000000000000 & 0000000 & 00000 & I \\
-0xfff00513 & 0010011 & 01010 & 000 & 00000 & - & - & 111111111111 & 1111111 & 01010 & I \\
-0x00008067 & 1100111 & 00000 & 000 & 00001 & - & - & 000000000000 & 0000000 & 00000 & I \\
+0x0  & 0x00050893 & 0010011 & 10001 & 000 & 01010 & - & - & 000000000000 & - & - & I \\
+0x4  & 0x00068513 & 0010011 & 01010 & 000 & 01101 & - & - & 000000000000 & - & - & I \\
+0x8  & 0x04088063 & 1100011 & - & 000 & 10001 & 00000 & - & - & 0000010 & 00000 & SB \\
+0xc  & 0x04058263 & 1100011 & - & 000 & 01011 & 00000 & - & - & 0000010 & 00100 & SB \\
+0x10 & 0x04060063 & 1100011 & - & 000 & 01100 & 00000 & - & - & 0000010 & 00000 & SB \\
+0x14 & 0x04d05063 & 1100011 & - & 101 & 00000 & 01101 & - & - & 0000010 & 00000 & SB \\
+0x18 & 0x00088793 & 0010011 & 01111 & 000 & 10001 & - & - & 000000000000 & - & - & I \\
+0x1c & 0x00269713 & 0010011 & 01110 & 001 & 01101 & - & - & 000000000010 & - & - & I \\
+0x20 & 0x00e888b3 & 0110011 & 10001 & 000 & 10001 & 01110 & 0000000 & - & 0000000 & 10001 & R \\
+0x24 & 0x0007a703 & 0000011 & 01110 & 010 & 01111 & - & - & 000000000000 & - & - & I \\
+0x28 & 0x0005a803 & 0000011 & 10000 & 010 & 01011 & - & - & 000000000000 & - & - & I \\
+0x2c & 0x01070733 & 0110011 & 01110 & 000 & 01110 & 10000 & 0000000 & - & 0000000 & 01110 & R \\
+0x30 & 0x00e62023 & 0100011 & - & 010 & 01100 & 01110 & - & - & 0000000 & 00000 & S \\
+0x34 & 0x00478793 & 0010011 & 01111 & 000 & 01111 & - & - & 000000000100 & - & - & I \\
+0x38 & 0x00458593 & 0010011 & 01011 & 000 & 01011 & - & - & 000000000100 & - & - & I \\
+0x3c & 0x00460613 & 0010011 & 01100 & 000 & 01100 & - & - & 000000000100 & - & - & I \\
+0x40 & 0xff1792e3 & 1100011 & - & 001 & 01111 & 10001 & - & - & 1111111 & 00101 & SB \\
+0x44 & 0x00008067 & 1100111 & 00000 & 000 & 00001 & - & - & 000000000000 & - & - & I \\
+0x48 & 0xfff00513 & 0010011 & 01010 & 000 & 00000 & - & - & 111111111111 & - & - & I \\
+0x4c & 0x00008067 & 1100111 & 00000 & 000 & 00001 & - & - & 000000000000 & - & - & I \\
+0x50 & 0xfff00513 & 0010011 & 01010 & 000 & 00000 & - & - & 111111111111 & - & - & I \\
+0x54 & 0x00008067 & 1100111 & 00000 & 000 & 00001 & - & - & 000000000000 & - & - & I \\
 \hline
 \end{tabular}
 \end{adjustbox}
+\caption{Decomposition of Hex Codes to RISC-V Instruction Format}
 \end{table}
 
 \newpage
+In order to better understand the provided program, Table 2 is introduced to map the hex codes with
+their corresponding assembly instructions. The register numbers are provided in the (x-registers)
+column and their symbolic names are provided in the (ABI) column for better clarity.
 
 \begin{table}[H]
 \centering
-\caption{RISC-V Instructions with Addresses}
 \label{tab:instructions-simple}
 \vspace{0.3cm}
 \renewcommand{\arraystretch}{1.6} % Increases row height for all rows
@@ -90,9 +93,9 @@ a Table 1 is provided in order to give the instruction format, register numbers 
 0x8  & 0x04088063 & beq a7, zero, 64   & beq  x17, x0, 64 \\
 0xc  & 0x04058263 & beq a1, zero, 68   & beq  x11, x0, 68 \\
 0x10 & 0x04060063 & beq a2, zero, 64   & beq  x12, x0, 64 \\
-0x14 & 0x04d05063 & bge zero, a3, 148  & bge  x0, x13, 148 \\
+0x14 & 0x04d05063 & bge zero, a3, 64   & bge  x0, x13, 64 \\
 0x18 & 0x00088793 & addi a5, a7, 0     & addi x15, x17, 0 \\
-0x1c & 0x00269713 & addi a4, a3, 2     & addi x14, x13, 2 \\
+0x1c & 0x00269713 & slli a4, a3, 2     & slli x14, x13, 2 \\
 0x20 & 0x00e888b3 & add  a7, a7, a4    & add  x17, x17, x14 \\
 0x24 & 0x0007a703 & lw   a4, 0(a5)     & lw   x14, 0(x15) \\
 0x28 & 0x0005a803 & lw   a6, 0(a1)     & lw   x16, 0(x11) \\
@@ -101,7 +104,7 @@ a Table 1 is provided in order to give the instruction format, register numbers 
 0x34 & 0x00478793 & addi a5, a5, 4     & addi x15, x15, 4   \\
 0x38 & 0x00458593 & addi a1, a1, 4     & addi x11, x11, 4   \\
 0x3c & 0x00460613 & addi a2, a2, 4     & addi x12, x12, 4   \\
-0x40 & 0xff1792e3 & bne a5, a7, -16    & bne  x15, x17, -16 \\
+0x40 & 0xff1792e3 & bne a5, a7, -28    & bne  x15, x17, -28 \\
 0x44 & 0x00008067 & jalr zero, ra, 0   & jalr x0, x1, 0     \\
 0x48 & 0xfff00513 & addi a0, zero, -1  & addi x10, x0, -1   \\
 0x4c & 0x00008067 & jalr zero, ra, 0   & jalr x0, x1, 0     \\
@@ -109,6 +112,7 @@ a Table 1 is provided in order to give the instruction format, register numbers 
 0x54 & 0x00008067 & jalr zero, ra, 0   & jalr x0, x1, 0     \\
 \hline
 \end{tabular}
+\caption{RISC-V Instructions with register numbers, symbolic names and addresses}
 \end{table}
 
 \subsection{Branch Delay Slot Concept}
@@ -132,6 +136,8 @@ deffered until the delay slot instruction is executed.
 Advantages of using branch delay slots include improved performance in pipelined architectures, since
 it helps to reduce the number of pipeline stalls caused by branch instructions.
 
+plus branch delay slots was initially a good ideea then a bad ideea
+
 \subsection{Branch Instructions Analysis}
 In order to understand better the provided program, it is useful to check the branch instructions and
 where they lead to.
@@ -151,18 +157,13 @@ where they lead to.
 0x08 & beq a7, zero, 64  & 0x48: addi a0, zero, -1 \\
 0xc  & beq a1, zero, 68  & 0x50: addi a0, zero, -1 \\
 0x10 & beq a2, zero, 64  & 0x50: addi a0, zero, -1 \\
-0x14 & bge zero, a3, 148 & 0xA8: ? \\
+0x14 & bge zero, a3, 148 & 0xA8: ? - the immediate field is sign extended in riskv \\
 0x40 & bne a5, a7, -16   & 0x30: sw a4, 0(a2) \\
 
 \hline
 \end{tabular}
 \end{table}
 
-F D E W
-b
-nop b
-a nop b
-a a nop
 \subsection{Program Functionality}
 
 The function provided is summing up the elements of two arrays until the end of one of the arrays is
