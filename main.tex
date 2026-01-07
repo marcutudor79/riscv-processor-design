@@ -11,6 +11,7 @@
 \usepackage{colortbl}
 \usepackage{adjustbox}
 \usepackage{float}
+\usepackage{listings}
 
 
 \title{Project 1 Exectuion Platforms}
@@ -70,10 +71,11 @@ R, I, S or SB.
 \caption{Decomposition of Hex Codes to RISC-V Instruction Format}
 \end{table}
 
-\newpage
-In order to better understand the provided program, Table 2 is introduced to map the hex codes with
-their corresponding assembly instructions. The register numbers are provided in the (x-registers)
-column and their symbolic names are provided in the (ABI) column for better clarity.
+A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
+This is because the provided program is missing them. There is also an overlap between the immediates
+of S and SB type instructions, as they share the same positions in the instruction format. The table
+head includes just the immediate fields for S out of simplicty, but in the case of SB, they were calculated
+as depicted in the RISC-V specification from the Project 1 description \cite{PR1-SE201-21}.
 
 \begin{table}[H]
 \centering
@@ -115,26 +117,38 @@ column and their symbolic names are provided in the (ABI) column for better clar
 \caption{RISC-V Instructions with register numbers, symbolic names and addresses}
 \end{table}
 
+In order to better understand the provided program, Table 2 is introduced to map the hex codes with
+their corresponding assembly instructions. As an overall view, the program is making use of RV32I instruction
+set only. The registers are represented in both their symbolic names (ABI) and x-register numbers.
+in order to facilitate the understanding of the program.
+
 \subsection{Branch Delay Slot Concept}
 The branch delay slot concept is interesting when discussing pipelined processors. Esentially, when
 a branch instruction is taken, the instructions that were fetched after the branch instructions might
-become invalid, if the branch is taken. To avoid this, the branch delay slot declares that the instruction
-immediately following a branch instruction is always executed, regardless of whether the branch is taken
-or not. This helps to mitigate the performance penalty associated with branch instructions.
-As explained in \cite{Stack-overflow-branch-delay}: "The idea of the branch shadow or delay slot is to recover one of those clocks. If you declare that
-the instruction after a branch is always executed then when a branch is taken the instruction in
-the decode slot also gets executed, the instruction in the fetch slot is discarded and you have one
-hole of time not two. So instead of execute, empty, empty, execute, execute you now have execute,
-execute, empty, execute, execute... in the execute stage of the pipeline. The branch is 50\% less
-painful, your overall average execution speed improves, etc."
+become invalid. To avoid this, the branch delay slot declares that the instruction immediately following
+a branch instruction is always executed, regardless of whether the branch is taken or not. This helps to
+mitigate the performance penalty associated with branch instructions that invalidate subsequent instructions
+in the pipeline. As explained in \cite{Stack-overflow-branch-delay}: "The idea of the branch shadow or delay
+slot is to recover a part of the clocks. If you declare that the instruction after a branch is always
+executed then when a branch is taken, then the instruction in the decode slot also gets executed, while
+the instruction in the fetch slot is discarded. Therefore one has a hole of time not two."
 
-A disadvantage of using branch delay slots is that it may create complications in code debugging, since
-if the instruction in the delay slot has side effects, it may lead to an unexpected state of the registers
-and the memory. Also, it adds to the waiting time when trying to execute interruptions, since they will be
-deffered until the delay slot instruction is executed.
+In terms of advantages and disadvantages, there are several points to consider. For disadvantages:
 
-Advantages of using branch delay slots include improved performance in pipelined architectures, since
-it helps to reduce the number of pipeline stalls caused by branch instructions.
+- Branch delay slots may create complications in code debugging, since the instruction in the delay slot
+might have side effects, it may lead to an unexpected state of the registers and memory.
+
+- It adds to the waiting time when trying to execute interruptions, since they will be deffered until
+the delay slot instruction is executed. This is a problem in the case of real time systems.
+
+- Software compatibility requirements dictate that an architecture may not change the number of delay
+slots from one generation to the next. This inevitably requires that newer hardware implementations
+contain extra hardware to ensure that the architectural behaviour is followed despite no longer being relevant.
+
+Advantages of using branch delay slots include:
+
+- Improved performance in pipelined architectures, since it helps to reduce the number of pipeline
+stalls caused by branch instructions.
 
 plus branch delay slots was initially a good ideea then a bad ideea
 
@@ -155,24 +169,80 @@ where they lead to.
 \hline
 
 0x08 & beq a7, zero, 64  & 0x48: addi a0, zero, -1 \\
-0xc  & beq a1, zero, 68  & 0x50: addi a0, zero, -1 \\
+0x0c & beq a1, zero, 68  & 0x50: addi a0, zero, -1 \\
 0x10 & beq a2, zero, 64  & 0x50: addi a0, zero, -1 \\
-0x14 & bge zero, a3, 148 & 0xA8: ? - the immediate field is sign extended in riskv \\
-0x40 & bne a5, a7, -16   & 0x30: sw a4, 0(a2) \\
+0x14 & bge zero, a3, 148 & 0x54: jalr zero, ra, 0  \\
+0x40 & bne a5, a7, -28   & 0x24: lw a4, 0(a5)      \\
 
 \hline
 \end{tabular}
 \end{table}
 
+From the table above we can see that there are 4 first conditional branches, that being the
+addresses 0x08, 0x0c, 0x10 and 0x14, which resemble input value checks. Considering the calling
+convention for RISC-V, the registers a0-a7 are used for passing function arguments from the caller
+to the callee. In this case, the supposition of input value checks is valid. The first three jump
+to a return -1 in case the input values are 0, while the fourth one jumps to a return with the number
+of elements to be processed, which would be less than or equal to 0.
+
+The last conditional branch at address 0x40 is part of a loop. It checks whether the address stored
+in register a5, used as a counter, is equal to the last address to be processed, which is stored in
+register a7. If they are not equal, the program branches back to address 0x24 to continue processing
+the next elements. If they are equal, the program continues to the return instruction.
+
 \subsection{Program Functionality}
 
-The function provided is summing up the elements of two arrays until the end of one of the arrays is
-reached. The function will return -1 if one of the arrays has 0 elements, otherwise it will return
-0 upon successful completion.
+The program can be divided into three main parts: input validation, processing loop, and return value.
+The input validation part checks if any of the first three caller arguments are 0. The arguments are
+passed are actually pointers to the input and output arrays, so they are checked if they are null,
+which would indicate an invalid memory access, therefore leading to a jump to the section of the
+program corresponding to return -1. The fourth argument is the number of elements to be processed,
+which is checked in the register a3 to see if it is less than or equal to 0. In case it is, the program
+jumps to the section corresponding to return. In this case, it will return to the callee the value stored
+in a0, which is actually a3, the number of elements to be processed.
 
-\newpage
-\section{RISC-V Tool Chain}
-To be done.
+The processing loop starts at address 0x18 and continues until the branch instruction at address 0x40
+It consists of an initial setup for the loop counter in register a5 and for the final value of the
+counter, which is stored in register a7. Register a7 will store the address of the last element to be processed from
+one of the input arrays, calculated as the base address plus the number of elements multiplied by 4,
+the size of each element. Because the elements are 4 bytes long, it can be extrapolated that the arrays
+are made of 32-bit integers. The loop itself consists of loading the elements from both input arrays,
+by using registers a5 and a1, which store the current addresses of the elements. Afterwards, the elements
+are summed and stored in register a4, which is then stored in the output array location pointed by register a2.
+Finally, the addresses in registers a5, a1 and a2 are incremented by 4 to point to the next elements
+to be processed. The loop continues until the address in register a5 is equal to the address in register a7.
+This is ensured by the branch if not equal instruction at address 0x40.
+
+Finally, the return part is reached at address 0x44, where the program jumps back to the calle, using
+the address stored in register ra. The return value is stored in register a0, which is equal to the
+number of elements to be processed.
+
+% \section{RISC-V Tool Chain}
+
+% The program above is an assembly version of a C function that sums up the elements of two arrays. By
+% following it's logic, we can recreate the C code as follows:
+
+% \begin{lstlisting}[language=C]
+% int addv(int *out, int *in1, int *in2, int n)
+% {
+%     if (in1 == 0)
+%         return -1;
+%     if (in2 == 0)
+%         return -1;
+%     if (out == 0)
+%         return -1;
+%     if (n <= 0)
+%         return -1;
+
+%     for (int i = 0; i < n; i++) {
+%         out[i] = in1[i] + in2[i];
+%     }
+
+%     return 0;
+% }
+% \end{lstlisting}
+% At first from the addresses 0x8 till 0x14 we have a series of checks to see if any of the pointers
+% is null or if the number of elements is less than or equal to 0. We
 
 \newpage % keep bibliography on a new page
 \bibliographystyle{plain}   % choose a style
