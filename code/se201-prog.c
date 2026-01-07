@@ -1,29 +1,32 @@
-#include<stddef.h>
+/* * 1. Define NULL manually since we removed <stddef.h>/<stdio.h>
+ * (NULL is usually ((void*)0))
+ */
+#define NULL ((void*)0)
 
-int main() {
-    int a[] = {1, 2, 3, 4, 5};
-    int b[] = {10, 20, 30, 40, 50};
-    int n = 5;
-    int result[5];
-
-    int res = addv(a, b, result, n);
-    return 0;
-}
-
-int addv (int *in1 , int *in2 , int *out , int n)
+// Update the arguments to accept volatile pointers
+int addv(volatile int *in1, volatile int *in2, volatile int *out, int n)
 {
-    if ( in1 == NULL )
-        return -1;
-    if ( in2 == NULL )
-        return -1;
-    if ( out == NULL )
-        return -1;
-    if ( n <= 0 )
-        return n;
+    if (in1 == NULL) return -1;
+    if (in2 == NULL) return -1;
+    if (out == NULL) return -1;
+    if (n <= 0) return n;
 
-    for ( int i = 0 ; i < n ; i ++) {
-        out [i] = in1[i] + in2[i];
+    for (int i = 0; i < n; i++) {
+        // The compiler MUST generate lw (load word) and sw (store word) here
+        out[i] = in1[i] + in2[i];
     }
 
     return n;
 }
+
+int main() {
+    volatile int n = 50;
+    volatile int a[50] = {0};
+    volatile int b[50] = {0};
+    volatile int result[50] = {0};
+
+    addv(a, b, result, n);
+
+    return 0;
+}
+
