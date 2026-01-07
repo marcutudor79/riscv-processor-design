@@ -12,6 +12,7 @@
 \usepackage{adjustbox}
 \usepackage{float}
 \usepackage{listings}
+\usepackage{framed}
 
 
 \title{Project 1 Exectuion Platforms}
@@ -217,32 +218,71 @@ Finally, the return part is reached at address 0x44, where the program jumps bac
 the address stored in register ra. The return value is stored in register a0, which is equal to the
 number of elements to be processed.
 
-% \section{RISC-V Tool Chain}
+\section{RISC-V Tool Chain}
 
-% The program above is an assembly version of a C function that sums up the elements of two arrays. By
-% following it's logic, we can recreate the C code as follows:
+\subsection {Reimagined C Code}
+The above explanation of the program's functionality allows us to reimagine the C code that could
+have generated the assembly instructions that were previously described. An example of such C code
+is provided in the listing below:
 
-% \begin{lstlisting}[language=C]
-% int addv(int *out, int *in1, int *in2, int n)
-% {
-%     if (in1 == 0)
-%         return -1;
-%     if (in2 == 0)
-%         return -1;
-%     if (out == 0)
-%         return -1;
-%     if (n <= 0)
-%         return -1;
+\begin{lstlisting}[language=C, numbers=left, stepnumber=1, numbersep=5pt]
+int addv(int *in1, int *in2, int *out, int n)
+{
+    if (in1 == NULL)
+        return -1;
+    if (in2 == NULL)
+        return -1;
+    if (out == NULL)
+        return -1;
+    if (n <= 0)
+        return n;
 
-%     for (int i = 0; i < n; i++) {
-%         out[i] = in1[i] + in2[i];
-%     }
+    for (int i = 0; i < n; i++) {
+        out[i] = in1[i] + in2[i];
+    }
 
-%     return 0;
-% }
-% \end{lstlisting}
-% At first from the addresses 0x8 till 0x14 we have a series of checks to see if any of the pointers
-% is null or if the number of elements is less than or equal to 0. We
+    return n;
+}
+\end{lstlisting}
+
+\subsection{Compiling the C Code to RISC-V Assembly}
+By using the RISC-V GCC toolchain, one can compile the above C code into RISC-V object code and then
+dissasemble it to obtain the assembly instructions. The following command was used in order to produce
+the assembly code from the C source:
+
+\begin{framed}
+riscv64-linux-gnu-gcc -g -O0 -mcmodel=medlow -mabi=ilp32 -march=rv32im -Wall -c -o se201-prog.o se201-prog.c
+\end{framed}
+
+\subsection{Comparison between the Generated Assembly and the Provided Program}
+
+Generated Assembly Instructions:
+\begin{lstlisting}[numbers=left, stepnumber=1, numbersep=5pt]
+    addv:
+.LFB1:
+	.loc 1 14 1
+	.cfi_startproc
+	addi	sp,sp,-48
+	.cfi_def_cfa_offset 48
+	sw	s0,44(sp)
+	.cfi_offset 8, -4
+	addi	s0,sp,48
+	.cfi_def_cfa 8, 0
+	sw	a0,-36(s0)
+	sw	a1,-40(s0)
+	sw	a2,-44(s0)
+	sw	a3,-48(s0)
+	.loc 1 15 8
+	lw	a5,-36(s0)
+	bne	a5,zero,.L5
+	.loc 1 16 16
+	li	a5,-1
+	j	.L6
+\end{lstlisting}
+
+\subsection{Changing the Optimization Level}
+
+\section {RISC-V Architecture}
 
 \newpage % keep bibliography on a new page
 \bibliographystyle{plain}   % choose a style
