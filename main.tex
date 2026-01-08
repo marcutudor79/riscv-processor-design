@@ -17,21 +17,20 @@
 
 
 \title{Project 1 Exectuion Platforms}
-\author{Hamden Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
+\author{Hamdane Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
 \date{January 2025}
 
 \begin{document}
 
 \maketitle
 
+\newpage
+
 \section{Introduction to RISC-V Instruction Set Architecture}
 
 In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
 The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
-detailed translation of each instruction from it's hex code to it's format fields. Some of them
-not used in certain instruction types, and are marked with a dash (-) in the table. The ultimate factor
-that determines the instruction type is the "Type" column, which indicates instruction format label
-R, I, S or SB.
+detailed translation of each instruction from it's hex code to it's format fields. 
 
 \subsection{Program Instructions Decomposition}
 \begin{table}[H]
@@ -43,7 +42,7 @@ R, I, S or SB.
 \begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|c|}
 \hline
 \rowcolor{blue!20}
-\textbf{Address} & \textbf{Hex Code} & \textbf{Opcode (6:0)} & \textbf{rd (11:7)} & \textbf{funct3 (14:12)} & \textbf{rs1 (19:15)} & \textbf{rs2 (24:20)} & \textbf{funct7 (31:25)} & \textbf{imm[11:0] (31:20)} & \textbf{imm[11:5] (31:25)} & \textbf{imm[4:0] (11:7)} & \textbf{Type} \\
+\textbf{Address} & \textbf{Hex Code} & \textbf{Opcode (6:0)} & \textbf{rd (11:7)} & \textbf{funct3 (14:12)} & \textbf{rs1 (19:15)} & \textbf{rs2 (24:20)} & \textbf{funct7 (31:25)} & \textbf{imm[11:0] (31:20)} & \textbf{imm[X:X] (31:25)} & \textbf{\textbf{imm[X:X] (11:7)}} & \textbf{Type} \\
 \hline
 0x0  & 0x00050893 & 0010011 & 10001 & 000 & 01010 & - & - & 000000000000 & - & - & I \\
 0x4  & 0x00068513 & 0010011 & 01010 & 000 & 01101 & - & - & 000000000000 & - & - & I \\
@@ -70,14 +69,22 @@ R, I, S or SB.
 \hline
 \end{tabular}
 \end{adjustbox}
+
+\vspace{0.2cm}
+
+\footnotesize\textit{Note: Fields marked with dash (-) are not used in the corresponding instruction type. The Type column determines the instruction format: R, I, S, or SB.}
+\begin{itemize}
+    \setlength\itemsep{0pt}
+    \footnotesize\item S-type: imm[X:X] (11:7) = imm[4:0] (11:7) and imm[X:X] (31:25) = imm[11:5] (31:25)
+    \footnotesize\item SB-type: imm[X:X] (11:7) = imm[4:1$|$11] (11:7) and imm[X:X] (31:25) = imm[12$|$10:5] (31:25)
+\end{itemize}
+
 \caption{Decomposition of Hex Codes to RISC-V Instruction Format}
 \end{table}
 
 A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
 This is because the provided program is missing them. There is also an overlap between the immediates
-of S and SB type instructions, as they share the same positions in the instruction format. The table
-head includes just the immediate fields for S out of simplicty, but in the case of SB, they were calculated
-as depicted in the RISC-V specification from the Project 1 description \cite{PR1-SE201-21}.
+of S and SB type instructions, as they share the same positions in the instruction format. 
 
 \begin{table}[H]
 \centering
@@ -152,7 +159,7 @@ the delay slot instruction is executed. This is a problem in the case of real ti
 
 \item Software compatibility requirements dictate that an architecture may not change the number of delay
 slots from one generation to the next. This inevitably requires that newer hardware implementations
-contain extra hardware to ensure that the architectural behaviour is followed despite no longer being relevant.
+contain extra components to ensure that the architectural behaviour is followed despite no longer being relevant.
 \end{itemize}
 
 Advantages of using branch delay slots include:
