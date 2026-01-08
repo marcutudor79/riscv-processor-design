@@ -328,7 +328,7 @@ Therefore, taking into account all of the above observations, a complete C funct
 generated the provided assembly instructions is represented below:
 
 \begin{lstlisting}[language=C, numbers=left, stepnumber=1, numbersep=5pt]
-int addv(int *in1, int *in2, int *out, int n)
+int addv(int *in1,int *in2,int *out,int n)
 {
     if (in1 == NULL)
         return -1;
@@ -341,15 +341,15 @@ int addv(int *in1, int *in2, int *out, int n)
 
     int* in1_end = in1 + sizeof(int)*n;
     do {
-        out[i] = in1[i] + in2[i];
+        *out = *in1 + *in2;
+        in1++;
+        in2++;
+        out++;
     }
     while (in1 != in1_end);
-
     return n;
 }
 \end{lstlisting}
-
-\newpage
 
 \subsection{Compiling the C Code to RISC-V Assembly}
 By using the RISC-V GCC toolchain, one can compile the above C code into RISC-V object code and then
@@ -368,21 +368,15 @@ main.
 
 \begin{lstlisting}[language=C, numbers=left, stepnumber=1, numbersep=5pt]
 int main() {
-    volatile int n = 50;
-    volatile int a[50] = {0};
-    volatile int b[50] = {0};
-    volatile int result[50] = {0};
+    int n = 50;
+    int a[50] = {0};
+    int b[50] = {0};
+    int result[50] = {0};
 
     addv(a, b, result, n);
-
     return 0;
 }
 \end{lstlisting}
-
-The volatile keyword is used to prevent the compiler from optimizing away the arrays and the variable n,
-as they are used in the function call to addv. Also, it is important to force the compiler to use load
-store instruction when operating on the elements of the arrays, such that the genereted assembly can
-be compared with the one provided in the first section.
 
 \subsection{Comparison between the generated and the previous instructions}
 
@@ -397,7 +391,6 @@ Then, because the addv function is the one of interest, we can navigate to the c
 of the output, containing the label "addv". Below is a snippet of the generated assembly instructions
 for it:
 
-\newpage
 Generated Assembly Instructions:
 \begin{lstlisting}
 00000000 <addv>:
@@ -432,36 +425,32 @@ Generated Assembly Instructions:
   58:   0680006f                j       c0 <.L3>
 
 0000005c <.L6>:
-  5c:   fe042623                sw      zero,-20(s0)
-  60:   0500006f                j       b0 <.L7>
+  5c:   fd042783                lw      a5,-48(s0)
+  60:   00479793                slli    a5,a5,0x4
+  64:   fdc42703                lw      a4,-36(s0)
+  68:   00f707b3                add     a5,a4,a5
+  6c:   fef42623                sw      a5,-20(s0)
 
-00000064 <.L8>:
-  64:   fec42783                lw      a5,-20(s0)
-  68:   00279793                slli    a5,a5,0x2
-  6c:   fdc42703                lw      a4,-36(s0)
-  70:   00f707b3                add     a5,a4,a5
-  74:   0007a683                lw      a3,0(a5)
-  78:   fec42783                lw      a5,-20(s0)
-  7c:   00279793                slli    a5,a5,0x2
-  80:   fd842703                lw      a4,-40(s0)
-  84:   00f707b3                add     a5,a4,a5
-  88:   0007a703                lw      a4,0(a5)
-  8c:   fec42783                lw      a5,-20(s0)
-  90:   00279793                slli    a5,a5,0x2
-  94:   fd442603                lw      a2,-44(s0)
-  98:   00f607b3                add     a5,a2,a5
-  9c:   00e68733                add     a4,a3,a4
-  a0:   00e7a023                sw      a4,0(a5)
-  a4:   fec42783                lw      a5,-20(s0)
-  a8:   00178793                addi    a5,a5,1
-  ac:   fef42623                sw      a5,-20(s0)
-
-000000b0 <.L7>:
-  b0:   fec42703                lw      a4,-20(s0)
-  b4:   fd042783                lw      a5,-48(s0)
-  b8:   faf746e3                blt     a4,a5,64 <.L8>
-
-000000bc <.LBE2>:
+00000070 <.L7>:
+  70:   fdc42783                lw      a5,-36(s0)
+  74:   0007a703                lw      a4,0(a5)
+  78:   fd842783                lw      a5,-40(s0)
+  7c:   0007a783                lw      a5,0(a5)
+  80:   00f70733                add     a4,a4,a5
+  84:   fd442783                lw      a5,-44(s0)
+  88:   00e7a023                sw      a4,0(a5)
+  8c:   fdc42783                lw      a5,-36(s0)
+  90:   00478793                addi    a5,a5,4
+  94:   fcf42e23                sw      a5,-36(s0)
+  98:   fd842783                lw      a5,-40(s0)
+  9c:   00478793                addi    a5,a5,4
+  a0:   fcf42c23                sw      a5,-40(s0)
+  a4:   fd442783                lw      a5,-44(s0)
+  a8:   00478793                addi    a5,a5,4
+  ac:   fcf42a23                sw      a5,-44(s0)
+  b0:   fdc42703                lw      a4,-36(s0)
+  b4:   fec42783                lw      a5,-20(s0)
+  b8:   faf71ce3                bne     a4,a5,70 <.L7>
   bc:   fd042783                lw      a5,-48(s0)
 
 000000c0 <.L3>:
@@ -472,66 +461,85 @@ Generated Assembly Instructions:
 \end{lstlisting}
 
 By comparing the generated assembly with the one provided in the first section, one can observe that
-several differences exist. Firstly, the compiler puts the code in different sections, with different
-labels, such as .L2, .L3, .L4 etc, which correspond to parts of the addv function.
+several differences exist. Firstly, the compiler saves the function arguments on the stack before
+using them, that being a0, a1, a2 and a3. Then it loads them back from the stack to perform the checks.
 
-Secondly, the check for null pointers, which can be observed in the section .L2, .L4 and .L5 is done
-using the "bnez" instruction instead of a "beq", which instead of jumping to a common return -1,
-each "bnez" contains its own jump to the return -1 section. This leads to a larger code size and is
+Secondly, the check for null pointers, which can be observed in the section from 0x20 -- 0x48 is done
+using the "bnez" instruction instead of a "beq", which instead of jumping to a common return -1, they
+jump over the return -1 instructions to the next check. This leads to a larger code size and is
 also less efficient. The efficiency problem arises from the fact that if bnez is taken, when the pointer
 is valid, then the processor will have to flush the pipeline, if no branch prediction is used.
 
-Thirdly, the loop structure is different, as it can be seen in .L8 and .L7 sections. The loop counter
-is stored on stack, instead of in a register, which leads to additional load and store instructions.
-It is increment only by 1, instead of 4, and then multiplied by 4 when calculating the address of the
-element to be processed.
+Thirdly, the loop structure is different, as it can be seen in the 0x5c -- 0xb8 section. To compute
+the end address of the processing loop, the program first takes out of the stack the value of a3, shifts
+it by 4 then adds it to the address of the first element of the array, taken out of the stack as well.
+It stores the result back on the stack. In the given assembly, this is done using only three instructions,
+without using the stack at all. The same phenomenon can be observed for the loop body, in which each
+each element is taken out of the stack, for example the address of the first input array element, which
+is used to load the element, then the adress of the second input array element is taken out of the stack
+to load the element. They are added and then the address of the output array element is taken out of the
+stack to store the result. Finally, the addresses of the of the three arrays can be retaken out of the stack,
+incremented by 4 and stored back on the stack.
+
+Finally, the return part is similar, with the difference that actually a ret instruction is used instead
+of jalr zero, ra, 0.
 
 \subsection{Changing the Optimization Level}
-By switching the optimization level from -O0 to -O1, the generated assembly code changes significatly.
+By switching the optimization level from -O0 to -O, the generated assembly code changes significatly.
 It is observed that the code size is reduced, and the loop starts to resemble more the code provided
 in the first section. Below is a snippet of the generated assembly instructions:
 
 \begin{lstlisting}
 00000000 <addv>:
-   0:   00050813                mv      a6,a0
+   0:   00050793                mv      a5,a0
    4:   00068513                mv      a0,a3
 
 00000008 <.LVL1>:
-   8:   04080063                beqz    a6,48 <.L4>
-   c:   04058263                beqz    a1,50 <.L5>
-  10:   04060463                beqz    a2,58 <.L6>
-  14:   04d05463                blez    a3,5c <.L2>
-  18:   00080793                mv      a5,a6
-  1c:   00269713                slli    a4,a3,0x2
-  20:   00e80833                add     a6,a6,a4
+   8:   02078e63                beqz    a5,44 <.L4>
+   c:   04058063                beqz    a1,4c <.L5>
+  10:   04060263                beqz    a2,54 <.L6>
+  14:   04d05263                blez    a3,58 <.L2>
+  18:   00469893                slli    a7,a3,0x4
+  1c:   011788b3                add     a7,a5,a7
 
-00000024 <.L3>:
-  24:   0007a703                lw      a4,0(a5)
-  28:   0005a883                lw      a7,0(a1)
-  2c:   01170733                add     a4,a4,a7
-  30:   00e62023                sw      a4,0(a2)
-  34:   00478793                addi    a5,a5,4
-  38:   00458593                addi    a1,a1,4
-  3c:   00460613                addi    a2,a2,4
-  40:   ff0792e3                bne     a5,a6,24 <.L3>
-  44:   00008067                ret
+00000020 <.L3>:
+  20:   0007a703                lw      a4,0(a5)
+  24:   0005a803                lw      a6,0(a1)
+  28:   01070733                add     a4,a4,a6
+  2c:   00e62023                sw      a4,0(a2)
+  30:   00478793                addi    a5,a5,4
+  34:   00458593                addi    a1,a1,4
 
-00000048 <.L4>:
-  48:   fff00513                li      a0,-1
-  4c:   00008067                ret
+00000038 <.LVL4>:
+  38:   00460613                addi    a2,a2,4
 
-00000050 <.L5>:
-  50:   fff00513                li      a0,-1
+0000003c <.LVL5>:
+  3c:   fef892e3                bne     a7,a5,20 <.L3>
+  40:   00008067                ret
 
-00000054 <.LVL5>:
-  54:   00008067                ret
+00000044 <.L4>:
+  44:   fff00513                li      a0,-1
+  48:   00008067                ret
 
-00000058 <.L6>:
-  58:   fff00513                li      a0,-1
+0000004c <.L5>:
+  4c:   fff00513                li      a0,-1
 
-0000005c <.L2>:
-  5c:   00008067                ret
+00000050 <.LVL8>:
+  50:   00008067                ret
+
+00000054 <.L6>:
+  54:   fff00513                li      a0,-1
+
+00000058 <.L2>:
+  58:   00008067                ret
 \end{lstlisting}
+
+Firstly, the stack usage is eliminated completely and the function arguments are used directly from
+the registers. Secondly, the input validation part is more efficient, as it uses beqz instructions
+that jump directly to the return -1 section. The same phenomenon happens where a5 and a7 are used
+as loop counter and address of the last element to be processed, respectively. This version of code
+is very similar to the one provided in the first section, with only minor differencces in the return
+sections, that use li instead of addi and ret instead of jalr zero, ra, 0.
 
 Changes in code size occur as well when switching to higher optimization levels, such as -O3.
 
@@ -541,7 +549,7 @@ Changes in code size occur as well when switching to higher optimization levels,
    4:   04050063                beqz    a0,44 <.L8>
    8:   02058e63                beqz    a1,44 <.L8>
    c:   02060c63                beqz    a2,44 <.L8>
-  10:   00269893                slli    a7,a3,0x2
+  10:   00469893                slli    a7,a3,0x4
   14:   011508b3                add     a7,a0,a7
   18:   02d05263                blez    a3,3c <.L5>
 
@@ -549,28 +557,35 @@ Changes in code size occur as well when switching to higher optimization levels,
   1c:   0007a703                lw      a4,0(a5)
   20:   0005a803                lw      a6,0(a1)
   24:   00478793                addi    a5,a5,4
+
+00000028 <.LVL2>:
   28:   00458593                addi    a1,a1,4
+
+0000002c <.LVL3>:
   2c:   01070733                add     a4,a4,a6
   30:   00e62023                sw      a4,0(a2)
+
+00000034 <.LVL4>:
   34:   00460613                addi    a2,a2,4
-  38:   ff1792e3                bne     a5,a7,1c <.L4>
+
+00000038 <.LVL5>:
+  38:   fef892e3                bne     a7,a5,1c <.L4>
 
 0000003c <.L5>:
   3c:   00068513                mv      a0,a3
-
-00000040 <.LVL2>:
   40:   00008067                ret
 
 00000044 <.L8>:
   44:   fff00513                li      a0,-1
 
-00000048 <.LVL4>:
+00000048 <.LVL7>:
   48:   00008067                ret
 \end{lstlisting}
 
+Here there are no more output sections that esentially do the same thing, such as in the -O version,
+in which the li a0, -1 and ret instructions were repeated three times. The instructions are also
+reordered slightly, but the overall structure remains the same.
 
-
-\newpage
 \section {RISC-V Architecture}
 
 \section {Procressor Design}
