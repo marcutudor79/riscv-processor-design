@@ -13,6 +13,7 @@
 \usepackage{float}
 \usepackage{listings}
 \usepackage{framed}
+\usepackage[nobreak=true]{mdframed}
 
 
 \title{Project 1 Exectuion Platforms}
@@ -125,33 +126,51 @@ in order to facilitate the understanding of the program.
 
 \subsection{Branch Delay Slot Concept}
 The branch delay slot concept is interesting when discussing pipelined processors. Esentially, when
-a branch instruction is taken, the instructions that were fetched after the branch instructions might
-become invalid. To avoid this, the branch delay slot declares that the instruction immediately following
+a branch instruction is taken, the instructions that were fetched after the branch instructions become
+invalid if there is no branch prediction. To avoid this, the branch delay slot declares that the instruction immediately following
 a branch instruction is always executed, regardless of whether the branch is taken or not. This helps to
 mitigate the performance penalty associated with branch instructions that invalidate subsequent instructions
 in the pipeline. As explained in \cite{Stack-overflow-branch-delay}: "The idea of the branch shadow or delay
 slot is to recover a part of the clocks. If you declare that the instruction after a branch is always
 executed then when a branch is taken, then the instruction in the decode slot also gets executed, while
-the instruction in the fetch slot is discarded. Therefore one has a hole of time not two."
+the instruction in the fetch slot is discarded. Therefore one has a hole of time not two." The branch
+delay slot will be filled with an instruction that is independent of the branch outcome by the compiler
+in the compilation phase of the program. It will look in a window of instructions before and after the
+branch instruction to find a suitable candidate that will come right after it.
 
-In terms of advantages and disadvantages, there are several points to consider. For disadvantages:
+In terms of advantages and disadvantages, there are several points to consider.
 
-- Branch delay slots may create complications in code debugging, since the instruction in the delay slot
+For disadvantages:
+
+\begin{itemize}
+
+\item Branch delay slots may create complications in code debugging, since the instruction in the delay slot
 might have side effects, it may lead to an unexpected state of the registers and memory.
 
-- It adds to the waiting time when trying to execute interruptions, since they will be deffered until
+\item It adds to the waiting time when trying to execute interruptions, since they will be deffered until
 the delay slot instruction is executed. This is a problem in the case of real time systems.
 
-- Software compatibility requirements dictate that an architecture may not change the number of delay
+\item Software compatibility requirements dictate that an architecture may not change the number of delay
 slots from one generation to the next. This inevitably requires that newer hardware implementations
 contain extra hardware to ensure that the architectural behaviour is followed despite no longer being relevant.
+\end{itemize}
 
 Advantages of using branch delay slots include:
 
-- Improved performance in pipelined architectures, since it helps to reduce the number of pipeline
-stalls caused by branch instructions.
+\begin{itemize}
 
-plus branch delay slots was initially a good ideea then a bad ideea
+\item Improved performance in pipelined architectures, since it helps to reduce the number of pipeline
+stalls caused by branch instructions if no branch prediction is used.
+
+\item The use of branch delay slots helps simplify processor design by removing the need for sophisticated
+branch prediction mechanisms in early architectures. As a result, the hardware becomes easier and less
+expensive to implement.
+
+\end{itemize}
+
+Nowadays, the branch delay slot concept bacame obsolete, as modern processors use branch prediction
+techniques to mitigate the braching performance penalty. This also mitigates the complications of
+having the compiler finding suitable instructions to fill the delay slots.
 
 \subsection{Branch Instructions Analysis}
 In order to understand better the provided program, it is useful to check the branch instructions and
@@ -218,12 +237,65 @@ Finally, the return part is reached at address 0x44, where the program jumps bac
 the address stored in register ra. The return value is stored in register a0, which is equal to the
 number of elements to be processed.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% SECTION 2 RISC-V Tool Chain
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+
 \section{RISC-V Tool Chain}
 
 \subsection {Reimagined C Code}
 The above explanation of the program's functionality allows us to reimagine the C code that could
-have generated the assembly instructions that were previously described. An example of such C code
-is provided in the listing below:
+have generated the assembly instructions that were previously described. To do so, one can have an
+intuition on what certain assembly instructions would mean in C. For example, for the part of input
+validation, the conditinal branches checks can be equivalent to if statements in C.
+
+\begin{mdframed}
+    beq a7, zero, 64
+
+    \dots
+
+    addi a0, zero, -1
+
+    jalr zero, ra, 0 $ \longrightarrow $   if (in1 == NULL) return -1;
+\end{mdframed}
+
+There is no direct connection between the register names and C variables, therefore arbitratry names
+can be assigned to them based on their usage. For example, register a0 can be assigned to the variable
+"in1", register a1 to "in2", register a2 to "out" and register a3 to "n", representing the two input
+arrays, the output array and the number of elements to be processed from the arrays.
+
+For the processing loop, one can reimagine it as a for loop in C, iterating from 0 to n-1. This is
+reflected in the assembly instructions which first setup the counter and the final conditional branch
+to check if it has reached its final value.
+
+\begin{framed}
+    bne a5, a7, -28
+
+    addi a5, a7, 0
+
+    slli a4, a3, 2
+
+    add a7, a7, a4 $ \longrightarrow $   for (int i = 0; i < n; i++) \{ ... \}
+\end{framed}
+
+As for the operations inside the loop, the lw can be mapped to array accesses in C, the add instruction
+to the assignment operator and the sw to the assignment operator as well.
+
+\begin{framed}
+    lw a4, 0(a5)
+
+    lw a6, 0(a1)
+
+    add a4, a4, a6
+
+    sw a4, 0(a2) $ \longrightarrow $   out[i] = in1[i] + in2[i];
+\end{framed}
+
+Therefore, taking into account all of the above observations, a complete C functions that could have
+generated the provided assembly instructions is represented below:
 
 \begin{lstlisting}[language=C, numbers=left, stepnumber=1, numbersep=5pt]
 int addv(int *in1, int *in2, int *out, int n)
@@ -245,28 +317,40 @@ int addv(int *in1, int *in2, int *out, int n)
 }
 \end{lstlisting}
 
+\newpage
+
 \subsection{Compiling the C Code to RISC-V Assembly}
 By using the RISC-V GCC toolchain, one can compile the above C code into RISC-V object code and then
 dissasemble it to obtain the assembly instructions. The following command was used in order to produce
-the object file from the C source code:
+the object file "se201-prog.o" from the C source file "se201-prog.c":
 
 \begin{framed}
 riscv64-linux-gnu-gcc -g -O0 -mcmodel=medlow -mabi=ilp32 -march=rv32im -Wall -c -o se201-prog.o se201-prog.c
 \end{framed}
 
-A fair mention is that in order to have a compiled program, one needs to provide a main function as
-an entry point. What is shown below is the dummy main function in which the addv function is called:
+A fair mention is that in order to have a compilible C program, one needs to provide a main function as
+an entry point. In it, the input arrays and the output array are defined, along with the number of
+elements to be processed. The call to the addv function, which was seen previously, is also made in
+main.
+
+
 \begin{lstlisting}[language=C, numbers=left, stepnumber=1, numbersep=5pt]
 int main() {
-    int a[] = {1, 2, 3, 4, 5};
-    int b[] = {10, 20, 30, 40, 50};
-    int n = 5;
-    int result[5];
+    volatile int n = 50;
+    volatile int a[50] = {0};
+    volatile int b[50] = {0};
+    volatile int result[50] = {0};
 
-    int res = addv(a, b, result, n);
+    addv(a, b, result, n);
+
     return 0;
 }
 \end{lstlisting}
+
+The volatile keyword is used to prevent the compiler from optimizing away the arrays and the variable n,
+as they are used in the function call to addv. Also, it is important to force the compiler to use load
+store instruction when operating on the elements of the arrays, such that the genereted assembly can
+be compared with the one provided in the first section.
 
 \subsection{Comparison between the generated and the previous instructions}
 
@@ -279,7 +363,7 @@ riscv64-linux-gnu-objdump -d ./se201-prog.o
 
 Then, because the addv function is the one of interest, we can navigate to the corresponding part
 of the output, containing the label "addv". Below is a snippet of the generated assembly instructions
-for the addv function:
+for it:
 
 \newpage
 Generated Assembly Instructions:
@@ -356,16 +440,19 @@ Generated Assembly Instructions:
 \end{lstlisting}
 
 By comparing the generated assembly with the one provided in the first section, one can observe that
-several differences exist. Firstly, in this generated assembly, only the stack is used for passing
-arguments from the caller to the callee, while in the provided assembly, the registered were used to
-pass the arguments.
+several differences exist. Firstly, the compiler puts the code in different sections, with different
+labels, such as .L2, .L3, .L4 etc, which correspond to parts of the addv function.
 
 Secondly, the check for null pointers, which can be observed in the section .L2, .L4 and .L5 is done
-using the bnez instruction and instead of jumping to a common return -1, each check contains its own
-jump to the return -1 section. This leads to a larger code size and is also less efficient due to the
-fact that the positive case needs an extra jump, which normally, flushes the pipeline.
+using the "bnez" instruction instead of a "beq", which instead of jumping to a common return -1,
+each "bnez" contains its own jump to the return -1 section. This leads to a larger code size and is
+also less efficient. The efficiency problem arises from the fact that if bnez is taken, when the pointer
+is valid, then the processor will have to flush the pipeline, if no branch prediction is used.
 
-Thirdly, the loop structure is different, as it can be seen in .L8 and .L7 sections.
+Thirdly, the loop structure is different, as it can be seen in .L8 and .L7 sections. The loop counter
+is stored on stack, instead of in a register, which leads to additional load and store instructions.
+It is increment only by 1, instead of 4, and then multiplied by 4 when calculating the address of the
+element to be processed.
 
 \subsection{Changing the Optimization Level}
 By switching the optimization level from -O0 to -O1, the generated assembly code changes significatly.
@@ -448,6 +535,8 @@ Changes in code size occur as well when switching to higher optimization levels,
 00000048 <.LVL4>:
   48:   00008067                ret
 \end{lstlisting}
+
+
 
 \newpage
 \section {RISC-V Architecture}
