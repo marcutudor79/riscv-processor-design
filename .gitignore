@@ -4,3 +4,7 @@ build\
 *.fls
 *.fdb*
 *.synctex.gz
+*.aux
+main.out
+*.bbl
+*.blg
