@@ -14,6 +14,7 @@
 \usepackage{listings}
 \usepackage{framed}
 \usepackage[nobreak=true]{mdframed}
+\usepackage{pdflscape}
 
 
 \title{Project 1 Exectuion Platforms}
@@ -615,12 +616,80 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 0x208 & 0x62 \\
 0x20C & 0x00 \\
 0x210 & 0x00 \\
-
 \hline
 \end{tabular}
 \caption{Initial memory contents}
 \end{table}
 
+\begin{landscape}
+\begin{table}[H]
+\raggedright
+\vspace{0.3cm}
+\renewcommand{\arraystretch}{2}
+\begin{adjustbox}{width=\textwidth, center}
+\begin{tabular}{|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{PC} & \textbf{Instruction} & \textbf{a0} & \textbf{a1} & \textbf{a2} & \textbf{a3} & \textbf{a4} & \textbf{a5} & \textbf{a6} & \textbf{a7} & \textbf{Explanation} \\
+\hline
+0x0  & addi a7, a0, 0    & 0x200        & 0x200          & 0x200          & 0x2 & 0x0           & 0x0            & 0x0           & \textbf{0x200} & Copy value of a0 into a7 \\
+0x4  & addi a0, a3, 0    & \textbf{0x2} & 0x200          & 0x200          & 0x2 & 0x0           & 0x0            & 0x0           & 0x200          & Copy value of a3 into a0 \\
+0x8  & beq a7, zero, 64  & 0x2          & 0x200          & 0x200          & 0x2 & 0x0           & 0x0            & 0x0           & 0x200          & Branch not taken, PC goes to 0xc  \\
+0xc  & beq a1, zero, 68  & 0x2          & 0x200          & 0x200          & 0x2 & 0x0           & 0x0            & 0x0           & 0x200          & Branch not taken, PC goes to 0x10 \\
+0x10 & beq a2, zero, 64  & 0x2          & 0x200          & 0x200          & 0x2 & 0x0           & 0x0            & 0x0           & 0x200          & Branch not taken, PC goes to 0x14 \\
+0x14 & bge zero, a3, 64  & 0x2          & 0x200          & 0x200          & 0x2 & 0x0           & 0x0            & 0x0           & 0x200          & Branch not taken, PC goes to 0x18 \\
+0x18 & addi a5, a7, 0    & 0x2          & 0x200          & 0x200          & 0x2 & 0x0           & \textbf{0x200} & 0x0           & 0x200          & Copy value of a7 into a5 \\
+0x1c & slli a4, a3, 2    & 0x2          & 0x200          & 0x200          & 0x2 & \textbf{0x8}  & 0x200          & 0x0           & 0x200          & Multiply value of a3 by 4, store it in a4 \\
+0x20 & add a7, a7, a4    & 0x2          & 0x200          & 0x200          & 0x2 & 0x8           & 0x200          & 0x0           & \textbf{0x208} & Fast forward a4 and add it to a7 \\
+0x24 & lw a4, 0(a5)      & 0x2          & 0x200          & 0x200          & 0x2 & \textbf{0x61} & 0x200          & 0x0           & 0x208          & Load value of address stored in a5, to a4 \\
+0x28 & lw a6, 0(a1)      & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & 0x200          & \textbf{0x61} & 0x208          & Load value of address stored in a1, to a6 \\
+0x2c & add a4, a4, a6    & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & 0x200          & \textbf{0xC2} & 0x208          & Double the value stored in a4 \\
+0x30 & sw a4, 0(a2)      & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & 0x200          & 0xC2          & 0x208          & Store 0xC2 at 0x200 in memory \\
+0x34 & addi a5, a5, 4    & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & \textbf{0x204} & 0xC2          & 0x208          & Add 0x4 to a5 \\
+0x38 & addi a1, a1, 4    & 0x2          & \textbf{0x204} & 0x200          & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & Add 0x4 to a1 \\
+0x3c & addi a2, a2, 4    & 0x2          & 0x204          & \textbf{0x204} & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & Add 0x4 to a2 \\
+0x40 & bne a5, a7, -28   & 0x2          & 0x204          & 0x204          & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & a5 $!=$ a7, so branch is taken, then PC is assigned 0x24 \\
+0x24 & lw a4, 0(a5)      & 0x2          & 0x200          & 0x200          & 0x2 & \textbf{0x20} & 0x200          & 0x0           & 0x208          & Load value of address stored in a5, to a4 \\
+0x28 & lw a6, 0(a1)      & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & 0x200          & \textbf{0x20} & 0x208          & Load value of address stored in a1, to a6 \\
+0x2c & add a4, a4, a6    & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & 0x200          & \textbf{0x40} & 0x208          & Double the value stored in a4 \\
+0x30 & sw a4, 0(a2)      & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & 0x200          & 0xC2          & 0x208          & Store 0x40 at 0x204 in memory \\
+0x34 & addi a5, a5, 4    & 0x2          & 0x200          & 0x200          & 0x2 & 0x61          & \textbf{0x208} & 0xC2          & 0x208          & Add 0x4 to a5 \\
+0x38 & addi a1, a1, 4    & 0x2          & \textbf{0x208} & 0x200          & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & Add 0x4 to a1 \\
+0x3c & addi a2, a2, 4    & 0x2          & 0x204          & \textbf{0x208} & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & Add 0x4 to a2 \\
+0x40 & bne a5, a7, -28   & 0x2          & 0x204          & 0x204          & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & a5 $==$ a7, PC goes to 0x44 \\
+0x44 & jalr zero, ra, 0  & 0x2          & 0x204          & 0x204          & 0x2 & 0x61          & 0x204          & 0xC2          & 0x208          & The PC goes to the address stored in ra, 0x0 \\
+
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Program flow table}
+\end{table}
+\end{landscape}
+
+\hspace*{1em} Explicitly explain how hazards occur.
+
+\hspace*{1em} The final memory state is represented in the table below.
+
+\begin{table}[H]
+\centering
+\label{tab:instructions-simple}
+\vspace{0.3cm}
+\renewcommand{\arraystretch}{1.6} % Increases row height for all rows
+\begin{tabular}{|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Address} & \textbf{Value} \\
+\hline
+
+0x200 & 0xC2 \\
+0x204 & 0x40 \\
+0x208 & 0x62 \\
+0x20C & 0x00 \\
+0x210 & 0x00 \\
+\hline
+\end{tabular}
+\caption{Final memory state}
+\end{table}
 
 \newpage
 \section {Procressor Design}
