@@ -581,6 +581,48 @@ reordered slightly, but the overall structure remains the same.
 
 \section {RISC-V Architecture}
 
+\hspace*{1em} For the following part, a simple RISC-V processor is assumed. It consists of 5 stages (IF, ID, EX, MEM, WB).
+The registers are read in the ID stage and written in the WB stage. The MEM stage is used for load and store,
+but the address is computed in the EX stage. Data hazards between a memory load and another instruction
+immediately using its result is resolved by stalling the ID stage.
+
+The branches are performed in EX stage. The two instruction following a branch is flushed when the
+branch is taken. For the arithmetic instructions forwarding is performed in order to reduce stalls.
+That means that the result from the EX stage is forwarded back to the EX stage inputs when needed
+by the next instruction.
+
+\subsection {Program Flow}
+
+\hspace*{1em} The program flow for the provided program is described in the following table. The table provides a
+brief explanation of what happens in the processor and program state. At first the processor has the
+registers a0, a1 and a2 set to value 0x200. Regiter a3 has the value 0x2, and all the other registers
+are set to 0.
+
+The memory contents at the addresses 0x200 through 0x210 is given as follows:
+\begin{table}[H]
+\centering
+\label{tab:instructions-simple}
+\vspace{0.3cm}
+\renewcommand{\arraystretch}{1.6} % Increases row height for all rows
+\begin{tabular}{|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Address} & \textbf{Value} \\
+\hline
+
+0x200 & 0x61 \\
+0x204 & 0x20 \\
+0x208 & 0x62 \\
+0x20C & 0x00 \\
+0x210 & 0x00 \\
+
+\hline
+\end{tabular}
+\caption{Initial memory contents}
+\end{table}
+
+
+\newpage
 \section {Procressor Design}
 \subsection {Instruction Set Architecture}
 
