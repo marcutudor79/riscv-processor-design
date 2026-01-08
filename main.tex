@@ -691,6 +691,29 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \caption{Final memory state}
 \end{table}
 
+\subsection{Pipeline Execution Diagram}
+
+\begin{table}[H]
+\centering
+\label{tab:instructions-simple}
+\vspace{0.3cm}
+\renewcommand{\arraystretch}{1.6} % Increases row height for all rows
+\begin{tabular}{|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Stage} & \textbf{} & \textbf{} & \textbf{} & \textbf{} & \textbf{} \\
+\hline
+
+Fetch         & - & - & - & - & - \\
+Decode        & - & - & - & - & - \\
+Execute       & - & - & - & - & - \\
+Memory access & - & - & - & - & - \\
+Write back    & - & - & - & - & - \\
+\hline
+\end{tabular}
+\caption{Pipeline Execution}
+\end{table}
+
 \newpage
 \section {Procressor Design}
 \subsection {Instruction Set Architecture}
