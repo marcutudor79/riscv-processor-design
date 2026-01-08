@@ -273,13 +273,14 @@ processing finished and the result is ready & number of processed elements      
 \section{RISC-V Tool Chain}
 
 \subsection {Reimagined C Code}
-The above explanation of the program's functionality allows us to reimagine the C code that could
+\hspace*{1em} The above explanation of the program's functionality allows us to reimagine the C code that could
 have generated the assembly instructions that were previously described. To do so, one can have an
-intuition on what certain assembly instructions would mean in C. For example, for the part of input
-validation, the conditinal branches checks can be equivalent to if statements in C.
+intuition on what certain assembly instructions would mean. For example, for the part of input
+validation, the conditinal branches checks can be equivalent to the if statements of C language.
 
 \begin{mdframed}
-    beq a7, zero, 64
+
+    \hspace*{1em} beq a7, zero, 64
 
     \dots
 
@@ -288,23 +289,26 @@ validation, the conditinal branches checks can be equivalent to if statements in
     jalr zero, ra, 0 $ \longrightarrow $   if (in1 == NULL) return -1;
 \end{mdframed}
 
-There is no direct connection between the register names and C variables, therefore arbitratry names
+There is no direct connection between the register names and C variables, therefore arbitrary names
 can be assigned to them based on their usage. For example, register a0 can be assigned to the variable
 "in1", register a1 to "in2", register a2 to "out" and register a3 to "n", representing the two input
 arrays, the output array and the number of elements to be processed from the arrays.
 
-For the processing loop, one can reimagine it as a for loop in C, iterating from 0 to n-1. This is
+For the processing loop, one can reimagine it as a do while loop, iterating from 0 to n-1. This is
 reflected in the assembly instructions which first setup the counter and the final conditional branch
 to check if it has reached its final value.
 
 \begin{framed}
-    bne a5, a7, -28
 
     addi a5, a7, 0
 
     slli a4, a3, 2
 
-    add a7, a7, a4 $ \longrightarrow $   for (int i = 0; i < n; i++) \{ ... \}
+    add a7, a7, a4
+
+    \dots
+
+    bne a5, a7, -28 $ \longrightarrow $   in1\_end = in1 + sizeof(int)*n; do \{ \dots \} while (in1 != in1\_end);
 \end{framed}
 
 As for the operations inside the loop, the lw can be mapped to array accesses in C, the add instruction
@@ -335,9 +339,11 @@ int addv(int *in1, int *in2, int *out, int n)
     if (n <= 0)
         return n;
 
-    for (int i = 0; i < n; i++) {
+    int* in1_end = in1 + sizeof(int)*n;
+    do {
         out[i] = in1[i] + in2[i];
     }
+    while (in1 != in1_end);
 
     return n;
 }
