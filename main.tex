@@ -178,7 +178,6 @@ where they lead to.
 
 \begin{table}[H]
 \centering
-\caption{RISC-V Instructions with Addresses}
 \label{tab:instructions-simple}
 \vspace{0.3cm}
 \renewcommand{\arraystretch}{1.6} % Increases row height for all rows
@@ -196,6 +195,7 @@ where they lead to.
 
 \hline
 \end{tabular}
+\caption{RISC-V Instructions with Addresses}
 \end{table}
 
 From the table above we can see that there are 4 first conditional branches, that being the
@@ -218,8 +218,7 @@ passed are actually pointers to the input and output arrays, so they are checked
 which would indicate an invalid memory access, therefore leading to a jump to the section of the
 program corresponding to return -1. The fourth argument is the number of elements to be processed,
 which is checked in the register a3 to see if it is less than or equal to 0. In case it is, the program
-jumps to the section corresponding to return. In this case, it will return to the callee the value stored
-in a0, which is actually a3, the number of elements to be processed.
+jumps to the section corresponding to return, with the number of elements to be processed.
 
 The processing loop starts at address 0x18 and continues until the branch instruction at address 0x40
 It consists of an initial setup for the loop counter in register a5 and for the final value of the
@@ -236,6 +235,26 @@ This is ensured by the branch if not equal instruction at address 0x40.
 Finally, the return part is reached at address 0x44, where the program jumps back to the calle, using
 the address stored in register ra. The return value is stored in register a0, which is equal to the
 number of elements to be processed.
+
+\begin{table}[H]
+\centering
+\label{tab:instructions-simple}
+\vspace{0.3cm}
+\renewcommand{\arraystretch}{1.6} % Increases row height for all rows
+\begin{tabular}{|c|c|l|}
+\hline
+\rowcolor{blue!20}
+\textbf{Situation} & \textbf{Return value} \\
+\hline
+
+input pointers are null & -1 \\
+number of elements to be processed <= 0 & number of elemnts to be processed \\
+processing finished and the result is ready & number of processed elements \\
+
+\hline
+\end{tabular}
+\caption{Return values of the program}
+\end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -540,6 +559,59 @@ Changes in code size occur as well when switching to higher optimization levels,
 
 \newpage
 \section {RISC-V Architecture}
+
+\section {Procressor Design}
+\subsection {Instruction Set Architecture}
+
+For the processor that we are designing, we will have an instruction set based on 16 bit wide instructions.
+There are 16 registers, all of them being 32 bit wide. The processor is of harvard architecture type.
+
+• R0-R1: Return Registers
+• R0-R4: Argument Registers (used to pass up to 4 function arguments)
+• R5-R8: Temporary Registers (not preserved across function calls)
+• R9-R12: Saved Registers (preserved across function calls)
+• R13: Stack Pointer (SP)
+• R14: Return Address Register (RA)
+• R15: Program Counter (PC) (implicit, cannot be directly modified)
+
+The operands are sign extended.
+
+Arithmetic and logic instructions:
+- SUM rd, rs1, rs2  ; rd = rs1 + rs2
+- DIF rd, rs1, rs2  ; rd = rs1 - rs2
+- SHL rd, rs1, rs2  ; rd = rs1 << rs2
+
+Load from memory a 32bit value:
+- MEL rd, rs1, imm ; rd = MEM[rs1 + imm] - Memory load
+- MES rd, rs1, imm ; MEM[rs1 + imm] = rd - Memory store
+
+Instruction to copy an immediate value to a register:
+- SET rd, imm ; rd = imm
+
+Define a conditional branch instruction having 1 register operand and 10 bit immediate
+- BNZ rs1, imm ; if (rs1 != 0) PC = PC + imm * 2
+
+Define an unconditional jump instruction having 1 register operand (read)
+- GTO rs1 ; PC = rs1
+
+Define a call instruction having 1 imm 9 bits
+- CALL imm ; RA = PC + 2; PC = PC + imm * 2
+
+Conditional branches, unconditional jumps, and calls in the instruction set have a branch delay slot
+for a single instruction.
+
+%% Deﬁne how the 16 registers have to be used by the programmer. In particular deﬁne how
+%% arguments are passed on function calls for functions with up to 4 arguments. Deﬁne how
+%% a to return from a function call and how the returned result of the function call can be
+%% retrieved. Which registers are preserved/or potentially modiﬁed during a function call
+%% https://computerscience.chemeketa.edu/armTutorial/Functions/CallingConvention.html
+
+%% OPCODES IN NUMERICAL ORDER BY OPCODE + RV32I BASE INTEGER INSTRUCTIONS
+
+%% Define a no operation - SUM R0, R0, 0
+
+
+
 
 \newpage % keep bibliography on a new page
 \bibliographystyle{plain}   % choose a style
