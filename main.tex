@@ -26,7 +26,7 @@
 
 \section{Introduction to RISC-V Instruction Set Architecture}
 
-In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
+\hspace*{1em} In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
 The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
 detailed translation of each instruction from it's hex code to it's format fields. Some of them
 not used in certain instruction types, and are marked with a dash (-) in the table. The ultimate factor
@@ -73,7 +73,7 @@ R, I, S or SB.
 \caption{Decomposition of Hex Codes to RISC-V Instruction Format}
 \end{table}
 
-A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
+\hspace*{1em} A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
 This is because the provided program is missing them. There is also an overlap between the immediates
 of S and SB type instructions, as they share the same positions in the instruction format. The table
 head includes just the immediate fields for S out of simplicty, but in the case of SB, they were calculated
@@ -125,7 +125,7 @@ set only. The registers are represented in both their symbolic names (ABI) and x
 in order to facilitate the understanding of the program.
 
 \subsection{Branch Delay Slot Concept}
-The branch delay slot concept is interesting when discussing pipelined processors. Esentially, when
+\hspace*{1em} The branch delay slot concept is interesting when discussing pipelined processors. Esentially, when
 a branch instruction is taken, the instructions that were fetched after the branch instructions become
 invalid if there is no branch prediction. To avoid this, the branch delay slot declares that the instruction immediately following
 a branch instruction is always executed, regardless of whether the branch is taken or not. This helps to
@@ -173,7 +173,7 @@ techniques to mitigate the braching performance penalty. This also mitigates the
 having the compiler finding suitable instructions to fill the delay slots.
 
 \subsection{Branch Instructions Analysis}
-In order to understand better the provided program, it is useful to check the branch instructions and
+\hspace*{1em} In order to understand better the provided program, it is useful to check the branch instructions and
 where they lead to.
 
 \begin{table}[H]
@@ -212,7 +212,7 @@ the next elements. If they are equal, the program continues to the return instru
 
 \subsection{Program Functionality}
 
-The program can be divided into three main parts: input validation, processing loop, and return value.
+\hspace*{1em} The program can be divided into three main parts: input validation, processing loop, and return value.
 The input validation part checks if any of the first three caller arguments are 0. The arguments are
 passed are actually pointers to the input and output arrays, so they are checked if they are null,
 which would indicate an invalid memory access, therefore leading to a jump to the section of the
@@ -244,12 +244,12 @@ number of elements to be processed.
 \begin{tabular}{|c|c|l|}
 \hline
 \rowcolor{blue!20}
-\textbf{Situation} & \textbf{Return value} \\
+\textbf{Scenario} & \textbf{Return value} \\
 \hline
 
 input pointers are null & -1 \\
-number of elements to be processed <= 0 & number of elemnts to be processed \\
-processing finished and the result is ready & number of processed elements \\
+number of elements to be processed $\leq$ 0 & number of elemnts to be processed \\
+processing finished and the result is ready & number of processed elements      \\
 
 \hline
 \end{tabular}
