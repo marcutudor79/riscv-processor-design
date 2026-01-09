@@ -14,7 +14,8 @@
 \usepackage{listings}
 \usepackage{framed}
 \usepackage[nobreak=true]{mdframed}
-
+\usepackage{tikz}
+\usetikzlibrary{positioning, arrows.meta, shapes, calc}
 
 \title{Project 1 Exectuion Platforms}
 \author{Hamdane Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
@@ -30,7 +31,7 @@
 
 \hspace*{1em} In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
 The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
-detailed translation of each instruction from it's hex code to it's format fields. 
+detailed translation of each instruction from it's hex code to it's format fields.
 
 \subsection{Program Instructions Decomposition}
 \begin{table}[H]
@@ -84,7 +85,7 @@ detailed translation of each instruction from it's hex code to it's format field
 
 \hspace*{1em} A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
 This is because the provided program is missing them. There is also an overlap between the immediates
-of S and SB type instructions, as they share the same positions in the instruction format. 
+of S and SB type instructions, as they share the same positions in the instruction format.
 
 \begin{table}[H]
 \centering
@@ -132,18 +133,113 @@ set only. The registers are represented in both their symbolic names (ABI) and x
 in order to facilitate the understanding of the program.
 
 \subsection{Branch Delay Slot Concept}
-\hspace*{1em} The branch delay slot concept is interesting when discussing pipelined processors. Esentially, when
-a branch instruction is taken, the instructions that were fetched after the branch instructions become
-invalid if there is no branch prediction. To avoid this, the branch delay slot declares that the instruction immediately following
-a branch instruction is always executed, regardless of whether the branch is taken or not. This helps to
-mitigate the performance penalty associated with branch instructions that invalidate subsequent instructions
-in the pipeline. As explained in \cite{Stack-overflow-branch-delay}: "The idea of the branch shadow or delay
-slot is to recover a part of the clocks. If you declare that the instruction after a branch is always
-executed then when a branch is taken, then the instruction in the decode slot also gets executed, while
-the instruction in the fetch slot is discarded. Therefore one has a hole of time not two." The branch
-delay slot will be filled with an instruction that is independent of the branch outcome by the compiler
-in the compilation phase of the program. It will look in a window of instructions before and after the
-branch instruction to find a suitable candidate that will come right after it.
+The branch delay slot concept is interesting when discussing pipelined processors. Essentially, when
+a branch is taken, instructions fetched after the branch become
+invalid if there is no branch prediction mechanism. In early implementations, this issue was handled
+by filling the instruction following the branch with a no-operation (NOP) in order to preserve
+the normal functioning of the pipeline. However, the problem with this solution is that cycles are wasted doing nothing.
+
+A more efficient approach consists of executing a useful instruction right after the branch (the delay slot).
+This instruction is chosen such that it can be executed safely regardless of the branch decision. As a result,
+the instruction placed in the delay slot is always executed, whether the branch is taken or not.
+This technique helps reduce the performance penalty caused by pipeline flushing after branch instructions.
+
+As explained in \cite{Stack-overflow-branch-delay}: “\textit{The idea of the branch shadow or delay
+slot is to recover part of the clock cycles. If the instruction after a branch is always
+executed, then when a branch is taken, the instruction in the decode slot is also executed, while
+the instruction in the fetch slot is discarded. Therefore, one has a single wasted cycle instead of two.}”
+The responsibility of filling the branch delay slot is handled by the compiler during the compilation phase.
+To do so, the compiler examines a window of instructions located before and after the branch instruction
+and selects an instruction that can be safely moved into the delay slot without changing the program’s behavior.
+
+Figure~\ref{fig:branch_delay_slot} illustrates this behavior in a classical five-stage pipeline (IF, ID, EX, MEM, WB)
+using a concrete instruction sequence. In this example, the \texttt{BEQ} instruction is evaluated in the execute stage,
+and the branch decision is therefore known only after several cycles. The instruction immediately following the branch,
+\texttt{OR r7,r8,r9}, is placed in the delay slot and is executed unconditionally, even when the branch is taken.
+In contrast, the subsequent instruction \texttt{XOR r10,r11,r12}, which has already entered the pipeline,
+is flushed once the branch outcome is resolved. Execution then continues at the branch target labeled \texttt{Label},
+illustrating how the delay slot allows useful work to be performed while limiting the number of wasted cycles.
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+    scale=0.9,
+    transform shape,
+    instruction/.style={rectangle, draw, minimum width=2.8cm, minimum height=0.7cm, font=\ttfamily\scriptsize},
+    stage/.style={font=\scriptsize\bfseries},
+    cycle/.style={font=\scriptsize\bfseries},
+    arrow/.style={->, >=Stealth, thick, red}
+]
+
+% Cycle numbers at top
+\foreach \i in {1,...,8} {
+    \node[cycle] at (0.5 + 1.4*\i, 4) {C\i};
+}
+
+% Instructions labels on the left
+\node[instruction, anchor=east] at (0, 2.8) {ADD r1,r2,r3};
+\node[instruction, anchor=east] at (0, 1.9) {SUB r4,r5,r6};
+\node[instruction, anchor=east, fill=red!20] at (0, 1.0) {BEQ r1,r0,Label};
+\node[instruction, anchor=east, fill=yellow!30] at (0, 0.1) {OR r7,r8,r9};
+\node[instruction, anchor=east] at (0, -0.8) {XOR r10,r11,r12};
+\node[instruction, anchor=east] at (0, -1.7) {Label: AND ...};
+
+% Pipeline execution boxes with compact spacing
+% ADD instruction
+\foreach \i/\stage in {1/IF, 2/ID, 3/EX, 4/MEM, 5/WB} {
+    \node[draw, fill=blue!20, minimum width=1.1cm, minimum height=0.6cm] at (0.5 + 1.4*\i, 2.8) {\tiny\stage};
+}
+
+% SUB instruction
+\foreach \i/\stage in {2/IF, 3/ID, 4/EX, 5/MEM, 6/WB} {
+    \node[draw, fill=green!20, minimum width=1.1cm, minimum height=0.6cm] at (0.5 + 1.4*\i, 1.9) {\tiny\stage};
+}
+
+% BEQ instruction (branch)
+\foreach \i/\stage in {3/IF, 4/ID, 5/EX, 6/MEM, 7/WB} {
+    \node[draw, fill=red!20, minimum width=1.1cm, minimum height=0.6cm] at (0.5 + 1.4*\i, 1.0) {\tiny\stage};
+}
+
+% OR instruction (delay slot - always executed)
+\foreach \i/\stage in {4/IF, 5/ID, 6/EX, 7/MEM, 8/WB} {
+    \node[draw, fill=yellow!40, minimum width=1.1cm, minimum height=0.6cm] at (0.5 + 1.4*\i, 0.1) {\tiny\stage};
+}
+
+% XOR instruction (might be flushed if branch taken)
+\foreach \i/\stage in {5/IF, 6/ID} {
+    \node[draw, fill=gray!20, minimum width=1.1cm, minimum height=0.6cm, opacity=0.5] at (0.5 + 1.4*\i, -0.8) {\tiny\stage};
+}
+\node[font=\scriptsize] at (10.2, -0.8) {(Flushed)};
+
+% Target instruction (if branch taken)
+\foreach \i/\stage in {7/IF, 8/ID} {
+    \node[draw, fill=purple!20, minimum width=1.1cm, minimum height=0.6cm] at (0.5 + 1.4*\i, -1.7) {\tiny\stage};
+}
+
+% Arrow showing branch resolution
+\draw[arrow] (7.5, 0.7) -- (7.5, 0.4) node[midway, right, font=\scriptsize, xshift=0.2cm] {Branch};
+\node[font=\scriptsize] at (4.8, 0.2) {(Resolved)};
+
+% Legend - moved below with branch instruction legend added
+\node[font=\scriptsize\bfseries, anchor=north west] at (-0.5, -3.3) {Legend:};
+
+% Branch instruction legend
+\node[draw, fill=red!20, minimum width=0.8cm, minimum height=0.4cm, anchor=west] at (1.2, -3.5) {};
+\node[font=\scriptsize, anchor=west] at (2.2, -3.5) {Branch instruction};
+
+% Delay slot legend
+\node[draw, fill=yellow!40, minimum width=0.8cm, minimum height=0.4cm, anchor=west] at (1.2, -4.0) {};
+\node[font=\scriptsize, anchor=west] at (2.2, -4.0) {Delay slot instruction};
+
+% Flushed instruction legend
+\node[draw, fill=gray!20, minimum width=0.8cm, minimum height=0.4cm, opacity=0.5, anchor=west] at (5.5, -3.5) {};
+\node[font=\scriptsize, anchor=west] at (6.5, -3.5) {Flushed (if branch taken)};
+
+\end{tikzpicture}
+\caption{Branch delay slot in a 5-stage pipeline}
+\label{fig:branch_delay_slot}
+\end{figure}
+
+\newpage
 
 In terms of advantages and disadvantages, there are several points to consider.
 
@@ -178,6 +274,7 @@ expensive to implement.
 Nowadays, the branch delay slot concept bacame obsolete, as modern processors use branch prediction
 techniques to mitigate the braching performance penalty. This also mitigates the complications of
 having the compiler finding suitable instructions to fill the delay slots.
+
 
 \subsection{Branch Instructions Analysis}
 \hspace*{1em} In order to understand better the provided program, it is useful to check the branch instructions and
