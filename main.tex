@@ -18,6 +18,8 @@
 \usepackage{framed}
 \usepackage[nobreak=true]{mdframed}
 \usepackage{tikz}
+\usepackage{longtable}
+\usepackage{pdflscape}
 \usetikzlibrary{positioning, arrows.meta, shapes, calc}
 
 \setlength{\parindent}{0pt}
@@ -742,7 +744,7 @@ effective address calculations for loads and stores and branch condition evaluat
 EX stage, while data memory accesses for load and store instructions occur in the MEM stage. The design
 forwards ALU results to dependent instructions in order to not stall the pipeline.
 
-When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. It is assumed
+\hspace*{1em} When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. It is assumed
 that the memory replies in one cycle. Branches resolve in EX stage, where when taken, the next two fetched
 instructions are flushed and the PC jumps to the branch target.
 
@@ -799,39 +801,26 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \end{tabular}
 \caption{Final memory contents after program execution}
 \end{table}
-
-\hspace*{1em} Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
-
 \end{samepage}
-
 
 \newpage
 \thispagestyle{empty}
-
-\begin{sidewaystable}[p]
-\thispagestyle{empty}
-
-\vspace*{1cm}
-
-\centering
-\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}
+\begin{landscape}
+\begin{table}
 \label{tab:program-flow}
-
 \renewcommand{\arraystretch}{2.3}
-\Large
-
 \begin{adjustbox}{
   max width=\paperheight,
   center
 }
-\begin{tabular}{|c|l|c|c|c|c|c|c|c|c|l|l|}
+\begin{tabular}{|c|l|c|c|c|c|c|c|c|c|p{10cm}|p{\textwidth}|}
 \hline
 \rowcolor{blue!20}
 \textbf{PC} & \textbf{Instruction} & \textbf{a0} & \textbf{a1} & \textbf{a2} & \textbf{a3} & \textbf{a4} & \textbf{a5} & \textbf{a6} & \textbf{a7} & \textbf{Explanation} & \textbf{Hazard/Resolution} \\
 \hline
 0x00 & addi a7, a0           & 0x200 & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & \cellcolor{yellow!20}\textbf{0x200} & Copy value of a0 (return register) into a7 (limit address). & - \\
 0x04 & addi a0, a3           & \cellcolor{yellow!20}\textbf{0x2}   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Copy value of a3 (element count) into a0 (return register). & - \\
-0x08 & beq a7, x0, 0x48      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a7]\neq R[x0]\)); normal sequential PC progression, no pipeline flush required. Target: 0x48 = 0x08 + 64. & - \\
+0x08 & beq a7, x0, 0x48      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a7]\neq R[x0]\)); \newline normal sequential PC progression, no pipeline flush required. Target: 0x48 = 0x08 + 64. & - \\
 0x0c & beq a1, x0, 0x4c      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a1]\neq R[x0]\)); normal sequential PC progression, no pipeline flush required. Target: 0x50 = 0x0c + 68. & - \\
 0x10 & beq a2, x0, 0x50      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a2]\neq R[x0]\)); normal sequential PC progression, no pipeline flush required. Target: 0x50 = 0x10 + 64. & - \\
 0x14 & bge x0, a3, 0x54      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[x0] < R[a3]\)); normal sequential PC progression, no pipeline flush required. Target: 0x54 = 0x14 + 64. & - \\
@@ -839,29 +828,53 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 0x1c & slli a4, a3, 2        & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0x8}   & 0x200 & 0x0   & 0x200 & Compute byte count for n elements: shift a3 left by 2; value in a4 becomes 8. & - \\
 0x20 & add a7, a7, a4        & 0x2   & 0x200 & 0x200 & 0x2 & 0x8   & 0x200 & 0x0   & \cellcolor{yellow!20}\textbf{0x208} & Compute end pointer: a7 = base + (n*4) = 0x208. & - \\
 0x24 & lw a4, 0(a5)          & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0x61}  & 0x200 & 0x0   & 0x208 & Compute address in EX stage (0x200); read word in MEM stage (0x61); write result into a4 in WB. & - \\
-0x28 & lw a6, 0(a1)          & 0x2   & 0x200 & 0x200 & 0x2 & 0x61  & 0x200 & \cellcolor{yellow!20}\textbf{0x61}  & 0x208 & Compute address in EX stage (0x200); read word in MEM stage (0x61); write result into a6 in WB. Next instruction uses a6 immediately, so one cycle stall in ID. & The pipeline encounters a load-use hazard when the next instruction uses a6; the ID stage inserts one stall cycle and then forwards a6 to the EX stage. \\
-0x2c & add a4, a4, a6        & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0xc2}  & 0x200 & 0x61  & 0x208 & Add with forwarding: a4 = a4 + a6 = 0xc2. & The forwarding network supplies a6 to the EX stage, so the ALU completes without stalling. \\
+0x28 & lw a6, 0(a1)          & 0x2   & 0x200 & 0x200 & 0x2 & 0x61  & 0x200 & \cellcolor{yellow!20}\textbf{0x61}  & 0x208 & Compute address in EX stage (0x200); read word in MEM stage (0x61); write result into a6 in WB. Next instruction uses a6 immediately, so one cycle stall in ID. & The pipeline encounters a load-use hazard when the next instruction uses a6; \newline the ID stage inserts one stall cycle and then forwards a6 to the EX stage. \\
+0x2c & add a4, a4, a6        & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0xc2}  & 0x200 & 0x61  & 0x208 & Add with forwarding: a4 = a4 + a6 = 0xc2. & The forwarding network supplies a6 to the EX stage, so the ALU \newline completes without stalling. \\
 0x30 & sw a4, 0(a2)          & 0x2   & 0x200 & 0x200 & 0x2 & 0xc2  & 0x200 & 0x61  & 0x208 & Compute address in EX stage (0x200); write word in MEM stage (0xc2); memory [0x200] is updated; store uses forwarded a4. & The store uses the forwarded a4 and writes memory without stalling. \\
+0x34 & addi a5, a5, 4        & 0x2   & 0x200 & 0x200 & 0x2 & 0xc2  & \cellcolor{yellow!20}\textbf{0x204} & 0x61  & 0x208 & Advance loop cursor: a5 = a5 + 4. & - \\
+\end{tabular}
+\end{adjustbox}
+\end{table}
+\end{landscape}
+
+\newpage
+\thispagestyle{empty}
+\begin{landscape}
+\begin{table}
+\label{tab:program-flow}
+\renewcommand{\arraystretch}{2.3}
+\begin{adjustbox}{
+  max width=\paperheight,
+  center
+}
+\begin{tabular}{|c|l|c|c|c|c|c|c|c|c|p{\textwidth}|p{\textwidth}|}
+\hline
+\rowcolor{blue!20}
+\textbf{PC} & \textbf{Instruction} & \textbf{a0} & \textbf{a1} & \textbf{a2} & \textbf{a3} & \textbf{a4} & \textbf{a5} & \textbf{a6} & \textbf{a7} & \textbf{Explanation} & \textbf{Hazard/Resolution} \\
+\hline
 0x34 & addi a5, a5, 4        & 0x2   & 0x200 & 0x200 & 0x2 & 0xc2  & \cellcolor{yellow!20}\textbf{0x204} & 0x61  & 0x208 & Advance loop cursor: a5 = a5 + 4. & - \\
 0x38 & addi a1, a1, 4        & 0x2   & \cellcolor{yellow!20}\textbf{0x204} & 0x200 & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Advance source pointer: a1 = a1 + 4. & - \\
 0x3c & addi a2, a2, 4        & 0x2   & 0x204 & \cellcolor{yellow!20}\textbf{0x204} & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Advance destination pointer: a2 = a2 + 4. & - \\
-0x40 & bne a5, a7, -0x1c     & 0x2   & 0x204 & 0x204 & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Branch evaluated in EX stage and found taken (\(R[a5]\neq R[a7]\)); flush the next two instructions; set PC to 0x24. Target: 0x24 = 0x40 + (-0x1c). & The EX stage takes the branch; the fetch unit flushes two instructions and sets the PC to 0x24. \\
+0x40 & bne a5, a7, -0x1c     & 0x2   & 0x204 & 0x204 & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Branch evaluated in EX stage and found taken (\(R[a5]\neq R[a7]\)); flush the next two instructions; set PC to 0x24. Target: 0x24 = 0x40 + (-0x1c). & The EX stage takes the branch; the fetch unit flushes two instructions and \newline sets the PC to 0x24. \\
 0x24 & lw a4, 0(a5)          & 0x2   & 0x204 & 0x204 & 0x2 & \cellcolor{yellow!20}\textbf{0x20}  & 0x204 & 0x61  & 0x208 & Compute address in EX stage (0x204); read word in MEM stage (0x20); write result into a4 in WB. & - \\
-0x28 & lw a6, 0(a1)          & 0x2   & 0x204 & 0x204 & 0x2 & 0x20  & 0x204 & \cellcolor{yellow!20}\textbf{0x20}  & 0x208 & Compute address in EX stage (0x204); read word in MEM stage (0x20); write result into a6 in WB. Next instruction uses a6 immediately, so one cycle stall in ID. & The pipeline encounters a load-use hazard when the next instruction uses a6; the ID stage inserts one stall cycle and then forwards a6 to the EX stage. \\
-0x2c & add a4, a4, a6        & 0x2   & 0x204 & 0x204 & 0x2 & \cellcolor{yellow!20}\textbf{0x40}  & 0x204 & 0x20  & 0x208 & Add with forwarding: a4 = a4 + a6 = 0x40. & The forwarding network supplies a6 to the EX stage, so the ALU completes without stalling. \\
+0x28 & lw a6, 0(a1)          & 0x2   & 0x204 & 0x204 & 0x2 & 0x20  & 0x204 & \cellcolor{yellow!20}\textbf{0x20}  & 0x208 & Compute address in EX stage (0x204); read word in MEM stage (0x20); write result into a6 in WB. Next instruction uses a6 immediately, so one cycle stall in ID. & The pipeline encounters a load-use hazard when the next instruction uses a6; \newline the ID stage inserts one stall cycle and then forwards a6 to the EX stage. \\
+0x2c & add a4, a4, a6        & 0x2   & 0x204 & 0x204 & 0x2 & \cellcolor{yellow!20}\textbf{0x40}  & 0x204 & 0x20  & 0x208 & Add with forwarding: a4 = a4 + a6 = 0x40. & The forwarding network supplies a6 to the EX stage, so the ALU completes \newline without stalling. \\
 0x30 & sw a4, 0(a2)          & 0x2   & 0x204 & 0x204 & 0x2 & 0x40  & 0x204 & 0x20  & 0x208 & Compute address in EX stage (0x204); write word in MEM stage (0x40); memory [0x204] is updated; store uses forwarded a4. & The store uses the forwarded a4 and writes memory without stalling. \\
 0x34 & addi a5, a5, 4        & 0x2   & 0x204 & 0x204 & 0x2 & 0x40  & \cellcolor{yellow!20}\textbf{0x208} & 0x20  & 0x208 & Advance loop cursor: a5 = a5 + 4. & - \\
 0x38 & addi a1, a1, 4        & 0x2   & \cellcolor{yellow!20}\textbf{0x208} & 0x204 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Advance source pointer: a1 = a1 + 4. & - \\
 0x3c & addi a2, a2, 4        & 0x2   & 0x208 & \cellcolor{yellow!20}\textbf{0x208} & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Advance destination pointer: a2 = a2 + 4. & - \\
-0x40 & bne a5, a7, -0x1c     & 0x2   & 0x208 & 0x208 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Branch evaluated in EX stage and found not taken (\(R[a5]= R[a7]\)); normal sequential PC progression, no pipeline flush required. Target: 0x24 = 0x40 + (-0x1c), not taken. & The EX stage resolves the branch as not taken; the PC advances sequentially and no flush occurs. \\
+0x40 & bne a5, a7, -0x1c     & 0x2   & 0x208 & 0x208 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Branch evaluated in EX stage and found not taken (\(R[a5]= R[a7]\)); normal sequential PC progression, no pipeline flush required. Target: 0x24 = 0x40 + (-0x1c), not taken. & The EX stage resolves the branch as not taken; the PC advances sequentially \newline and no flush occurs. \\
 0x44 & ret                   & 0x2   & 0x208 & 0x208 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Return to \texttt{ra}; a0 already holds the element count (n=0x2). & - \\
+\hline
 \end{tabular}
 \end{adjustbox}
-
-\normalsize
-\end{sidewaystable}
+\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}
+\end{table}
+\end{landscape}
 
 \newpage
+\hspace*{1em} Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
+
 \subsection{Pipeline Diagram}
 \noindent The following diagrams show the 5-stage pipeline progression for all executed instructions. Colors denote pipeline stages; stalls and flushed wrong-path instructions are highlighted.
 
@@ -869,17 +882,23 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 
 \vspace{0.2cm}
 \begin{adjustbox}{width=\textwidth, center}
-\begin{tabular}{|l|l|p{0.7\textwidth}|}
+\begin{tabular}{|c|l|p{0.7\textwidth}|}
 \hline
 \rowcolor{blue!20}
   \textbf{Stage} & \textbf{Color} & \textbf{Role and Notes} \\
 \hline
 Instruction Fetch & \IF & Fetches the instruction at the current PC; sequentially increments PC unless a taken branch in \EXtxt \ overrides it. Wrong-path instructions after a taken branch become \FLUSHtxt. \\
+\hline
 Instruction Decode & \ID & Reads source registers and decodes opcode; detects hazards. On a load-use dependency, \IDtxt \ inserts a single \STALLtxt \ bubble before the dependent instruction can enter \EXtxt. \\
+\hline
 Execute & \EX & Performs ALU operations, effective address calculation, and branch resolution. Forwarding supplies operands from prior \EXtxt/\MEMtxt \ results to avoid stalls for ALU dependencies. \\
+\hline
 Memory & \MEM & Reads or writes data memory for loads/stores using the effective address computed in \EXtxt. Load results are available for forwarding after \MEMtxt. \\
+\hline
 Writeback & \WB & Writes results to destination registers (for ALU and loads). Stores do not write back. \\
+\hline
 Stall & \STALL & Represents a bubble introduced to wait for data (e.g. after a load when the very next instruction consumes the loaded value). \\
+\hline
 Flush & \FLUSH & Marks wrong-path instructions fetched before a taken branch resolves in \EXtxt; these do not affect architectural state. \\
 \hline
 \end{tabular}
