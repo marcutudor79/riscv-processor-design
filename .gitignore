@@ -8,4 +8,4 @@ build\
 main.out
 *.bbl
 *.blg
-*.pdf
+main.pdf
