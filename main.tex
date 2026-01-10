@@ -26,6 +26,33 @@
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
+
+\lstdefinelanguage{MyASM}{
+  morekeywords={
+    SETI, CALL, NOP, RET, SUM, DIF, GTO, SHR, MES, MEL, BNZ
+  },
+  sensitive=true,
+  morecomment=[l]{;},
+  morestring=[b]"
+}
+
+\lstdefinestyle{asmstyle}{
+  language=MyASM,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  frame=single,
+  rulecolor=\color{black!40},
+  backgroundcolor=\color{gray!5},
+  tabsize=2,
+  showstringspaces=false,
+  breaklines=true,
+  captionpos=b
+}
 \graphicspath{ {./img/} }
 
 
@@ -739,7 +766,7 @@ reordered slightly, but the overall structure remains the same.
 \newpage
 \section {RISC-V Architecture}
 
-For the following part, a simple RISC-V processor is assumed. It consists of 5 stages Instruction Fetch,
+\hspace*{1em} For the following part, a simple RISC-V processor is assumed. It consists of 5 stages Instruction Fetch,
 Instruction Decode, Execute, Memory Access and Write Back (IF, ID, EX, MEM, WB).
 Register operands are read during the ID stage and written back in the WB stage. The arithmetic operations,
 effective address calculations for loads and stores and branch condition evaluation are performed in the
@@ -1402,7 +1429,7 @@ This behavior is achieved using the \texttt{GTO R14} instruction, where register
 
 \paragraph{Add 2 numbers}\mbox{}\\
 
-\begin{lstlisting}
+\begin{lstlisting}[style=asmstyle]
 AddNumbers:
     SUM R1, R2, R3   ; R1 = Argument1 + Argument2
     RET              ; Return using link register (R14)
@@ -1411,7 +1438,7 @@ AddNumbers:
 
 \paragraph{Call the AddNumbers function}\mbox{}\\
 
-\begin{lstlisting}
+\begin{lstlisting}[style=asmstyle]
 CallSum:
     SETI  R2, 65408    ; Load first operand (65408) into R2 (First Argument)
     SETI  R3, 134      ; Load second operand (134) into R3 (Second argument)
@@ -1422,73 +1449,100 @@ CallSum:
 \end{lstlisting}
 
 \subsubsection{Translation of C code to our processor}
+This routine receives three pointers (\texttt{a}, \texttt{b}, \texttt{out}) and a fourth argument \texttt{n} indicating the number of elements. It first validates that \texttt{a}, \texttt{b}, and \texttt{out} are non-null and that \texttt{n} is a valid (non-negative) length. If the inputs are valid, it iterates from index $0$ to $n-1$ and stores \texttt{out[i] = a[i] + b[i]} for each position. The loop stops after processing $n$ elements, and the routine returns the original length \texttt{n}.
 
-\begin{lstlisting}
-  int *in1 R2, int *in2 R3, int *out R3, int n R4
-
-  addv:
-    BNZ R2 , 4
-    NOP
-    GTO ERROR
-    NOP
-    BNZ R3 , 4
-    NOP
-    GTO ERROR
-    NOP
-    BNZ R4, 4
-    NOP
-    GTO ERROR
-    NOP
-    BNZ R5,
-
-    SETI R6, 31
-    SHR R6, R5, R6
-    BNZ R6,
-    NOP
-    SUM R6,R2,R0
-    SETI R8,1
-    SETI R9,16
-    SUM R12,R5,R0
+\paragraph{Important details}\mbox{}\\
+\begin{itemize}
+  \item The function signature is \texttt{int addv(int *in1, int *in2, int *out, int n)}.
+  \item Function arguments are passed as follows: \texttt{in1} in \texttt{R2}, \texttt{in2} in \texttt{R3}, \texttt{out} in \texttt{R4}, and \texttt{n} in \texttt{R5}.
+  \item The return value is stored in register \texttt{R1}. The function returns the value of \texttt{counter} unless an error occurs, in which case it returns \texttt{-1}.
+  \item It is assumed that integers are 32 bits wide.
+  \item Due to the branch delay slot, a \texttt{NOP} instruction is inserted after control-flow instructions that implement branching.
+  \item For the \texttt{SETI RS1, LABEL} instruction, it is assumed that the compiler computes and provides the corresponding offset value.
+\end{itemize}
 
 
-    GTO RETURN
-    NOP
+\begin{lstlisting}[style=asmstyle]
+
+addv:
+    BNZ R2 , 4      ; Check whether input pointer in1 is non-null
+    SETI R12, ERROR ; Due to the branch delay slot, store the ERROR label address for later use
+    GTO R12         ; Jump in case of a null pointer
+    NOP             ; Branch delay slot
+
+    BNZ R3 , 4      ; Check whether the second input pointer is non-null
+    NOP             ; Branch delay slot
+    GTO R12         ; Jump to error handler
+    NOP             ; Branch delay slot
+
+    BNZ R4, 4       ; Check whether the third input pointer is non-null
+    NOP             ; Branch delay slot
+    GTO R12         ; Jump in case of error
+    NOP             ; Branch delay slot
+
+    SETI R10, RETURN ; Store return address in R10
+    BNZ R5, 4        ; Check whether the length argument is non-zero
+    NOP              ;
+    GTO  R10         ; If the 4th argument is zero, return immediately
+    NOP              ; Branch delay slot
+
+    SETI R6, 31      ; Load the number of bits used for the shift operation
+    SHR  R6, R5, R6  ; Shift all bits except the MSB to determine if n is positive or negative
+    BNZ R6, 8        ; If the result is 1, the value is negative and execution jumps to return
+                     ; Otherwise, execution continues normally
+
+    SUM R6, R2, R0   ; Copy the initial input pointer into another register
+    SETI R8, 1       ; Initialize loop counter
+    SETI R11, 32     ; Size of each vector element, assuming 32-bit integers
+    SUM R12, R5, R0  ; Create a copy of the vector length
+
+    SETI R7, InEND   ; Load address of the routine that computes the end position of the pointer
+    GTO  R7          ; Jump to function that finds the last element address
+    NOP              ; Branch delay slot
+
+    GTO R10          ; Jump to return sequence
+    NOP              ; Branch delay slot
 
 InEND:
-    DIF R7, R12, R8
-    SUM R6, R6, R9
-    BNZ R7, 4
-    NOP
-    GTO InEnd
-    NOP
+    DIF R12, R12, R8   ; Decrement the counter by 1
+    SUM R6, R6, R11   ; Advance the pointer to the next vector element
+    BNZ R12, 4        ; Check whether the end of the vector has been reached
+    SETI R10, LOOP    ; Store loop entry address
+    GTO  R10          ; End position found, jump back to LOOP
+    NOP               ; Branch delay slot
+
+    GTO R7            ; Continue with the next iteration of the InEnd routine
+    NOP               ; Branch delay slot
 
 LOOP:
-    MEL R8, R2, 0
-    MEL R9, R3, 0
-    SUM R10, R9, R8
-    MES R4, R10, 0
+    MEL R8, R2, 0    ; Load vector1[i] into a register
+    MEL R9, R3, 0    ; Load vector2[i] into a register
+    SUM R10, R9, R8  ; Add the loaded values
+    MES R4, R10, 0   ; Store the result into out[i]
 
-    SUM R2, R2, R9
-    SUM R3, R3, R9
-    SUM R4, R4, R9
+    SUM R2, R2, R11  ; Advance pointer to the next element of vector1
+    SUM R3, R3, R11  ; Advance pointer to the next element of vector2
+    SUM R4, R4, R11  ; Advance pointer to the next element of output vector
 
-    DIF R7, R6, R2
-    BNZ R7, 4
-    NOP
-    GTO RETURN
-    NOP
-    GTO LOOP
-    NOP
+    DIF R7, R6, R2   ; Subtract initial vector position from the end position
+    BNZ R7, 4        ; If the result is non-zero, continue the loop
+    SETI R12, RETURN ; Store return address
+    GTO R12          ; Jump to return to finish execution
+    NOP              ; Branch delay slot
 
-RETURN
-    SUM R1, R5, R0
-    RET
-    NOP
+    SETI R12, LOOP   ; Jump back to the loop to continue copying values
+    GTO R12          ;
+    NOP              ; Branch delay slot
+
+RETURN:
+    SUM R1, R5, R0  ; Return the counter value in R1
+    RET             ; Return from function
+    NOP             ; Branch delay slot
 
 ERROR:
-    SETI R1, -1
-    RET
-
+    SETI R1, -1     ; Return -1 in R1 due to an error
+    RET             ; Return from function
+    NOP             ; Branch delay slot
 
 
 \end{lstlisting}
