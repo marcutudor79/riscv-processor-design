@@ -76,7 +76,7 @@
 
 \section{Introduction to RISC-V Instruction Set Architecture}
 
-\hspace*{1em} In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
+In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
 The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
 detailed translation of each instruction from it's hex code to it's format fields.
 
@@ -130,7 +130,7 @@ detailed translation of each instruction from it's hex code to it's format field
 \caption{Decomposition of Hex Codes to RISC-V Instruction Format}
 \end{table}
 
-\hspace*{1em} A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
+A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
 This is because the provided program is missing them. There is also an overlap between the immediates
 of S and SB type instructions, as they share the same positions in the instruction format.
 
@@ -180,7 +180,7 @@ set only. The registers are represented in both their symbolic names (ABI) and x
 in order to facilitate the understanding of the program.
 
 \subsection{Branch Delay Slot Concept}
-\hspace*{1em} The branch delay slot concept is interesting when discussing pipelined processors. Essentially, when
+The branch delay slot concept is interesting when discussing pipelined processors. Essentially, when
 a branch is taken, instructions fetched after the branch become
 invalid if there is no branch prediction mechanism. In early implementations, this issue was handled
 by filling the instruction following the branch with a no-operation (NOP) in order to preserve
@@ -324,7 +324,7 @@ having the compiler finding suitable instructions to fill the delay slots.
 
 
 \subsection{Branch Instructions Analysis}
-\hspace*{1em} In order to understand better the provided program, it is useful to check the branch instructions and
+In order to understand better the provided program, it is useful to check the branch instructions and
 where they lead to.
 
 \begin{table}[H]
@@ -363,7 +363,7 @@ the next elements. If they are equal, the program continues to the return instru
 
 \subsection{Program Functionality}
 
-\hspace*{1em} The program can be divided into three main parts: input validation, processing loop, and return value.
+The program can be divided into three main parts: input validation, processing loop, and return value.
 The input validation part checks if any of the first three caller arguments are 0. The arguments are
 passed are actually pointers to the input and output arrays, so they are checked if they are null,
 which would indicate an invalid memory access, therefore leading to a jump to the section of the
@@ -417,7 +417,7 @@ processing finished and the result is ready & number of processed elements      
 \section{RISC-V Tool Chain}
 
 \subsection {Reimagined C Code}
-\hspace*{1em} The above explanation of the program's functionality allows us to reimagine the C code that could
+The above explanation of the program's functionality allows us to reimagine the C code that could
 have generated the assembly instructions that were previously described. To do so, one can have an
 intuition on what certain assembly instructions would mean. For example, for the part of input
 validation, the conditinal branches checks can be equivalent to the if statements of C language.
@@ -739,20 +739,20 @@ reordered slightly, but the overall structure remains the same.
 \newpage
 \section {RISC-V Architecture}
 
-\hspace*{1em} For the following part, a simple RISC-V processor is assumed. It consists of 5 stages Instruction Fetch,
+For the following part, a simple RISC-V processor is assumed. It consists of 5 stages Instruction Fetch,
 Instruction Decode, Execute, Memory Access and Write Back (IF, ID, EX, MEM, WB).
 Register operands are read during the ID stage and written back in the WB stage. The arithmetic operations,
 effective address calculations for loads and stores and branch condition evaluation are performed in the
 EX stage, while data memory accesses for load and store instructions occur in the MEM stage. The design
-forwards ALU results to dependent instructions in order to not stall the pipeline.
+forwards ALU results to dependent instructions in order to not stall the pipeline. \cite{patterson-hennessy-cod-riscv}
 
-\hspace*{1em} When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. It is assumed
+When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. \cite{patterson-hennessy-cod-riscv} It is assumed
 that the memory replies in one cycle. Branches resolve in EX stage, where when taken, the next two fetched
-instructions are flushed and the PC jumps to the branch target.
+instructions are flushed and the PC jumps to the branch target. \cite{patterson-hennessy-cod-riscv}
 
 \subsection{Program Flow (5-stage Pipeline)}
 
-\hspace*{1em} Table \ref{tab:program-flow} below presents the complete sequence of instructions executed until the function terminates with a ret instruction. For each instruction, the current architectural state is shown together with a brief explanation of the program behavior. Pipeline hazards, stalls, forwarding events and branch effects are explicitly identified as they occur.
+\hspace*{1em} Table \ref{tab:program-flow} below presents the complete sequence of instructions executed until the function terminates with a ret instruction. For each instruction, the current architectural state is shown together with a brief explanation of the program behavior. Pipeline hazards, stalls, forwarding events and branch effects are explicitly identified as they occur. \cite{patterson-waterman-riscv-reader}
 The table provides a
 brief explanation of what happens in the processor and program state. At first the processor has the
 registers a0, a1 and a2 set to value 0x200. Register a3 has the value 0x2 and all the other registers
@@ -809,7 +809,6 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \thispagestyle{empty}
 \begin{landscape}
 \begin{table}
-\label{tab:program-flow}
 \renewcommand{\arraystretch}{2.3}
 \begin{adjustbox}{
   max width=\paperheight,
@@ -843,7 +842,6 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \thispagestyle{empty}
 \begin{landscape}
 \begin{table}
-\label{tab:program-flow}
 \renewcommand{\arraystretch}{2.3}
 \begin{adjustbox}{
   max width=\paperheight,
@@ -870,12 +868,12 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \hline
 \end{tabular}
 \end{adjustbox}
-\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}
+\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}\label{tab:program-flow}
 \end{table}
 \end{landscape}
 
 \newpage
-\hspace*{1em} Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
+Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
 
 \subsection{Pipeline Diagram}
 \noindent The following diagrams show the 5-stage pipeline progression for all executed instructions. Colors denote pipeline stages; stalls and flushed wrong-path instructions are highlighted.
@@ -912,9 +910,9 @@ Flush & \FLUSH & Marks wrong-path instructions fetched before a taken branch res
 
 \noindent \textbf{Pipeline Overview}\\
 \indent The processor uses a classic five-stage in-order pipeline. Instructions advance one stage per cycle unless a hazard forces a stall or a taken branch flushes wrong-path work.\par
-\indent Forwarding sends ALU results from \EXtxt \ and \MEMtxt \ to subsequent instructions, allowing dependent additions (e.g. \texttt{add a4,a4,a6}) to proceed without stalling.\par
-\indent A load-use hazard occurs when the very next instruction needs a loaded value (\texttt{lw} immediately followed by \texttt{add}). The \IDtxt \ stage inserts a one-cycle \STALLtxt \ so that \MEMtxt \ can produce the value and the result is then forwarded into \EXtxt.\par
-\indent Branch resolution happens in \EXtxt. When the branch is taken, the fetch unit flushes the next two wrong-path instructions and redirects the PC to the computed target. When the branch is not taken, the PC advances sequentially.\par
+\indent Forwarding sends ALU results from \EXtxt \ and \MEMtxt \ to subsequent instructions, allowing dependent additions (e.g. \texttt{add a4,a4,a6}) to proceed without stalling. \cite{patterson-hennessy-cod-riscv}\par
+\indent A load-use hazard occurs when the very next instruction needs a loaded value (\texttt{lw} immediately followed by \texttt{add}). The \IDtxt \ stage inserts a one-cycle \STALLtxt \ so that \MEMtxt \ can produce the value and the result is then forwarded into \EXtxt. \par
+\indent Branch resolution happens in \EXtxt. When the branch is taken, the fetch unit flushes the next two wrong-path instructions and redirects the PC to the computed target. When the branch is not taken, the PC advances sequentially. \cite{patterson-hennessy-cod-riscv}\par
 \indent Stores consume forwarded data (e.g. the new \texttt{a4} value) and update memory in \MEMtxt. They do not introduce additional stalls in this design.\par
 \indent In the diagrams, each row shows an instruction’s stages by cycle (C1, C2, …). \STALLtxt cells indicate bubbles that are inserted and \FLUSHtxt rows show wrong-path instructions that are discarded after a taken branch.
 \vspace{0.2cm}
