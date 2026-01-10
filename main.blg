@@ -1,0 +1,50 @@
+This is BibTeX, Version 0.99d (TeX Live 2026/dev/Arch Linux)
+Capacity: max_strings=200000, hash_size=200000, hash_prime=170003
+The top-level auxiliary file: main.aux
+The style file: plain.bst
+Database file #1: ref.bib
+Warning--entry type for "Stack-overflow-branch-delay" isn't style-file defined
+--line 16 of file ref.bib
+Warning--to sort, need author, organization, or key in PR1-SE201-21
+You've used 2 entries,
+            2118 wiz_defined-function locations,
+            507 strings with 4174 characters,
+and the built_in function-call counts, 374 in all, are:
+= -- 34
+> -- 8
+< -- 0
++ -- 4
+- -- 2
+* -- 16
+:= -- 61
+add.period$ -- 5
+call.type$ -- 2
+change.case$ -- 6
+chr.to.int$ -- 0
+cite$ -- 3
+duplicate$ -- 15
+empty$ -- 42
+format.name$ -- 2
+if$ -- 81
+int.to.chr$ -- 0
+int.to.str$ -- 2
+missing$ -- 0
+newline$ -- 12
+num.names$ -- 2
+pop$ -- 11
+preamble$ -- 1
+purify$ -- 5
+quote$ -- 0
+skip$ -- 14
+stack$ -- 0
+substring$ -- 10
+swap$ -- 2
+text.length$ -- 0
+text.prefix$ -- 0
+top$ -- 0
+type$ -- 8
+warning$ -- 1
+while$ -- 2
+width$ -- 3
+write$ -- 20
+(There were 2 warnings)
