@@ -12,8 +12,8 @@ of a processor.
 # Timeline
 - [🟢] Finish 1st task: December 12
 - [🟢] Finish 2nd task: December 19
-- [🔴] Finish 3rd task: December 26
-- [🔴] Finish 4th task: December 30
+- [🟢] Finish 3rd task: December 26
+- [🟢/🔴] Finish 4th task: December 30
 - [🔴] Deadline: January 12, 2026 (23:55)
 
 # How to setup for the project

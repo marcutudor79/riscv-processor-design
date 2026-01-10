@@ -20,6 +20,8 @@
 \usepackage{tikz}
 \usepackage{longtable}
 \usepackage{pdflscape}
+\usepackage{graphicx}
+\usepackage{pdfpages}
 \usetikzlibrary{positioning, arrows.meta, shapes, calc}
 
 \setlength{\parindent}{0pt}
@@ -51,6 +53,7 @@
   breaklines=true,
   captionpos=b
 }
+\graphicspath{ {./img/} }
 
 
 \lstset{
@@ -100,7 +103,7 @@
 
 \section{Introduction to RISC-V Instruction Set Architecture}
 
-\hspace*{1em} In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
+In this section we are focusing on a decomposition of RISC-V hex instruction into the ASM instruction.
 The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
 detailed translation of each instruction from it's hex code to it's format fields.
 
@@ -154,7 +157,7 @@ detailed translation of each instruction from it's hex code to it's format field
 \caption{Decomposition of Hex Codes to RISC-V Instruction Format}
 \end{table}
 
-\hspace*{1em} A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
+A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
 This is because the provided program is missing them. There is also an overlap between the immediates
 of S and SB type instructions, as they share the same positions in the instruction format.
 
@@ -204,7 +207,7 @@ set only. The registers are represented in both their symbolic names (ABI) and x
 in order to facilitate the understanding of the program.
 
 \subsection{Branch Delay Slot Concept}
-\hspace*{1em} The branch delay slot concept is interesting when discussing pipelined processors. Essentially, when
+The branch delay slot concept is interesting when discussing pipelined processors. Essentially, when
 a branch is taken, instructions fetched after the branch become
 invalid if there is no branch prediction mechanism. In early implementations, this issue was handled
 by filling the instruction following the branch with a no-operation (NOP) in order to preserve
@@ -348,7 +351,7 @@ having the compiler finding suitable instructions to fill the delay slots.
 
 
 \subsection{Branch Instructions Analysis}
-\hspace*{1em} In order to understand better the provided program, it is useful to check the branch instructions and
+In order to understand better the provided program, it is useful to check the branch instructions and
 where they lead to.
 
 \begin{table}[H]
@@ -387,7 +390,7 @@ the next elements. If they are equal, the program continues to the return instru
 
 \subsection{Program Functionality}
 
-\hspace*{1em} The program can be divided into three main parts: input validation, processing loop, and return value.
+The program can be divided into three main parts: input validation, processing loop, and return value.
 The input validation part checks if any of the first three caller arguments are 0. The arguments are
 passed are actually pointers to the input and output arrays, so they are checked if they are null,
 which would indicate an invalid memory access, therefore leading to a jump to the section of the
@@ -441,7 +444,7 @@ processing finished and the result is ready & number of processed elements      
 \section{RISC-V Tool Chain}
 
 \subsection {Reimagined C Code}
-\hspace*{1em} The above explanation of the program's functionality allows us to reimagine the C code that could
+The above explanation of the program's functionality allows us to reimagine the C code that could
 have generated the assembly instructions that were previously described. To do so, one can have an
 intuition on what certain assembly instructions would mean. For example, for the part of input
 validation, the conditinal branches checks can be equivalent to the if statements of C language.
@@ -768,15 +771,15 @@ Instruction Decode, Execute, Memory Access and Write Back (IF, ID, EX, MEM, WB).
 Register operands are read during the ID stage and written back in the WB stage. The arithmetic operations,
 effective address calculations for loads and stores and branch condition evaluation are performed in the
 EX stage, while data memory accesses for load and store instructions occur in the MEM stage. The design
-forwards ALU results to dependent instructions in order to not stall the pipeline.
+forwards ALU results to dependent instructions in order to not stall the pipeline. \cite{patterson-hennessy-cod-riscv}
 
-\hspace*{1em} When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. It is assumed
+When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. \cite{patterson-hennessy-cod-riscv} It is assumed
 that the memory replies in one cycle. Branches resolve in EX stage, where when taken, the next two fetched
-instructions are flushed and the PC jumps to the branch target.
+instructions are flushed and the PC jumps to the branch target. \cite{patterson-hennessy-cod-riscv}
 
 \subsection{Program Flow (5-stage Pipeline)}
 
-\hspace*{1em} Table \ref{tab:program-flow} below presents the complete sequence of instructions executed until the function terminates with a ret instruction. For each instruction, the current architectural state is shown together with a brief explanation of the program behavior. Pipeline hazards, stalls, forwarding events and branch effects are explicitly identified as they occur.
+\hspace*{1em} Table \ref{tab:program-flow} below presents the complete sequence of instructions executed until the function terminates with a ret instruction. For each instruction, the current architectural state is shown together with a brief explanation of the program behavior. Pipeline hazards, stalls, forwarding events and branch effects are explicitly identified as they occur. \cite{patterson-waterman-riscv-reader}
 The table provides a
 brief explanation of what happens in the processor and program state. At first the processor has the
 registers a0, a1 and a2 set to value 0x200. Register a3 has the value 0x2 and all the other registers
@@ -833,7 +836,6 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \thispagestyle{empty}
 \begin{landscape}
 \begin{table}
-\label{tab:program-flow}
 \renewcommand{\arraystretch}{2.3}
 \begin{adjustbox}{
   max width=\paperheight,
@@ -867,7 +869,6 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \thispagestyle{empty}
 \begin{landscape}
 \begin{table}
-\label{tab:program-flow}
 \renewcommand{\arraystretch}{2.3}
 \begin{adjustbox}{
   max width=\paperheight,
@@ -894,12 +895,12 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 \hline
 \end{tabular}
 \end{adjustbox}
-\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}
+\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}\label{tab:program-flow}
 \end{table}
 \end{landscape}
 
 \newpage
-\hspace*{1em} Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
+Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
 
 \subsection{Pipeline Diagram}
 \noindent The following diagrams show the 5-stage pipeline progression for all executed instructions. Colors denote pipeline stages; stalls and flushed wrong-path instructions are highlighted.
@@ -936,9 +937,9 @@ Flush & \FLUSH & Marks wrong-path instructions fetched before a taken branch res
 
 \noindent \textbf{Pipeline Overview}\\
 \indent The processor uses a classic five-stage in-order pipeline. Instructions advance one stage per cycle unless a hazard forces a stall or a taken branch flushes wrong-path work.\par
-\indent Forwarding sends ALU results from \EXtxt \ and \MEMtxt \ to subsequent instructions, allowing dependent additions (e.g. \texttt{add a4,a4,a6}) to proceed without stalling.\par
-\indent A load-use hazard occurs when the very next instruction needs a loaded value (\texttt{lw} immediately followed by \texttt{add}). The \IDtxt \ stage inserts a one-cycle \STALLtxt \ so that \MEMtxt \ can produce the value and the result is then forwarded into \EXtxt.\par
-\indent Branch resolution happens in \EXtxt. When the branch is taken, the fetch unit flushes the next two wrong-path instructions and redirects the PC to the computed target. When the branch is not taken, the PC advances sequentially.\par
+\indent Forwarding sends ALU results from \EXtxt \ and \MEMtxt \ to subsequent instructions, allowing dependent additions (e.g. \texttt{add a4,a4,a6}) to proceed without stalling. \cite{patterson-hennessy-cod-riscv}\par
+\indent A load-use hazard occurs when the very next instruction needs a loaded value (\texttt{lw} immediately followed by \texttt{add}). The \IDtxt \ stage inserts a one-cycle \STALLtxt \ so that \MEMtxt \ can produce the value and the result is then forwarded into \EXtxt. \par
+\indent Branch resolution happens in \EXtxt. When the branch is taken, the fetch unit flushes the next two wrong-path instructions and redirects the PC to the computed target. When the branch is not taken, the PC advances sequentially. \cite{patterson-hennessy-cod-riscv}\par
 \indent Stores consume forwarded data (e.g. the new \texttt{a4} value) and update memory in \MEMtxt. They do not introduce additional stalls in this design.\par
 \indent In the diagrams, each row shows an instruction’s stages by cycle (C1, C2, …). \STALLtxt cells indicate bubbles that are inserted and \FLUSHtxt rows show wrong-path instructions that are discarded after a taken branch.
 \vspace{0.2cm}
@@ -1546,8 +1547,87 @@ ERROR:
 
 \end{lstlisting}
 
+\subsection{Pipelining}
+
+Now that the instruction set architecture has been defined, the processor can be implemented starting
+from it. In this section, a three stage pipeline design is implemented. The first stage is the instruction
+fetch stage (IF), the second stage is the instruction decode (ID), in which the branches are also resolved,
+and the last stage is the execution stage (EX). In this last stage, the ALU operations are performed, as well as the memory
+accesses for load and store instructions. The memory architecture is Harvard, so there is a separate
+block of memory for instructions and another one for data.
+
+In the fetch stage, we have a program counter (PC) block that is actually a register. It holds the
+address of the instruction to be fetched in the instruction memory. The PC is incremented by 2 every
+cycle by the ADD block, because the instructions are 16 bit wide. The memory for instructions is a
+combinational block that outputs the instruction corresponding to the address given by the PC.
+
+There are two pipeline registers in this design. The first one is between the IF and ID stages, and
+the second one is between the ID and EX stages. All the signals that are passed through these registers
+are stored in them, and then used in the next stage at the next clock cycle.
+
+In the decode stage, there is a "Decode" block that takes care of decoding the RegRdIdx1, RegRdIdx2,
+RegWrIdx, ALUOp, RegWrSel, RegWrEn and Branch. The Register File block contains the 16 registers of
+the processor. It receives RegRdIdx1 and RegRdIdx2 based on which it provides the corresponding
+register values as outputs, into the pipeline register. The sign extension block is also a core components
+of this processor, since we use sign extended immediates in the instructions.
+
+In the execution stage, there is the main unit, which is the ALU block. It receives two operands as
+input and performs the operation specified by ALUOp. The result is then sent to a multiplexer that
+selects between the ALU result and the data memory output. There is also the data memory block, that
+can provide data to load into the Register file. It also receives data to be stored and a signal to
+enable the write operation. At the end of this stage, the multiplexer's output is connected to the
+Register File to write back the result into the specified register.
+
+A special mention has to be made about the stalling mechanism, that is implemented using a special
+control unit. It receives as input the operands of the instruction in the ID stage, as well as the
+ones in the EX stage. If it detects a data hazards, it sends a stall signal the pipeline register
+in between the Fetch and Decode stages. It also sends a stall signal to the PC block, so that it
+does not increment to fetch the next instruction.
+
+\begin{landscape}
+\includepdf[landscape=true]{img/processor.pdf}
+\end{landscape}
 
 
+\subsection{Pipeline Hazards and Control}
+
+The hazards and control logic of the defined processor are explained in this subsection, considering the existance
+of three stage (instruction fetch, instruction decode and execute).
+
+A data hazard appears when one instruction needs a register value that is produced by the instruction in front of it.
+In this pipeline the producer writes the register in EX of the next cycle, while the consumer reads registers at
+the end of ID in that same cycle. Forwarding is not implemented in this design and we do not assume any
+write-before-read timing inside the register file. Therefore, back-to-back ALU dependencies are hazards and
+require one stall cycle so the value is written and then read in the following cycle. For example,
+after \texttt{SUM R5,R1,R2} the next instruction \texttt{DIF R6,R5,R3} needs a single-cycle stall
+to read the correct value of R5.
+
+When an instruction loads a value from data memory, the value only becomes available at the end of EX.
+The very next instruction would try to read that value earlier, at the end of ID, and it would still be missing.
+This is the classic load–use hazard. The fix is simple: insert one stall cycle. In practice, the decode stage
+holds the pipeline for one cycle when it sees that the instruction in EX is a load that writes the same register
+the current instruction needs. After that single pause, the value is ready and execution continues normally. As
+an example, \texttt{MEL R5,R1,imm} followed immediately by \texttt{SUM R6,R5,R3} needs one stall cycle, then it
+proceeds.
+
+Control hazards do not cause wrong execution in this design. Branches, jumps and calls are decided in ID and
+they have a single delay slot. The instruction already fetched in IF is that delay slot and it always runs,
+no matter whether the branch is taken or not. When the decision is taken, the processor holds fetch for one
+cycle so no extra instruction is fetched, then it sets the PC to the target and continues. Because the delay
+slot must execute, there is nothing to flush. If an extra instruction ever slips in beyond the slot, the
+control logic turns it into a no-operation so it has no effect.
+
+Flush logic in this processor is minimal. In normal operation there is no need to flush, because the delay-slot instruction always executes and the fetch stage is held for one cycle while the PC is redirected to the branch or jump target. This prevents fetching any wrong-path instructions. If, due to timing, the fetch stage brings in one extra instruction beyond the delay slot, the control unit simply turns that instruction into a no-operation for one cycle. Data hazards are handled by a single stall, not by flushing.
+
+Structural hazards do not appear in this processor. Fetch uses the instruction memory and execute uses the
+data memory and these memories are separate, so they do not contend. The pipeline issues one instruction
+per cycle and uses one ALU, so two instructions never try to use the same ALU at the same time. The register
+file has enough ports (two reads and one write), so reading two registers and writing one in the same cycle
+is supported. If a read and a write touch the same register in the same cycle, this is not a structural
+conflict because the ports exist; if the reader needs the newly written value, that becomes a data hazard
+ and we already handle it with a one‑cycle stall. Therefore, no extra stalls are needed for structural reasons.
+
+\end{document}
 
 
 
