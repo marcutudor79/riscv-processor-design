@@ -1531,45 +1531,45 @@ in between the Fetch and Decode stages. It also sends a stall signal to the PC b
 does not increment to fetch the next instruction.
 
 \begin{landscape}
-\includepdf[landscape=true]{img/processor.jpg}
+\includepdf[landscape=true]{img/processor.pdf}
 \end{landscape}
 
 
 \subsection{Pipeline Hazards and Control}
 
 The hazards and control logic of the defined processor are explained in this subsection, considering the existance
-of three stage (instruction fetch, instruction decode and execute). 
+of three stage (instruction fetch, instruction decode and execute).
 
 A data hazard appears when one instruction needs a register value that is produced by the instruction in front of it.
-In this pipeline the producer writes the register in EX of the next cycle, while the consumer reads registers at 
-the end of ID in that same cycle. Forwarding is not implemented in this design and we do not assume any 
-write-before-read timing inside the register file. Therefore, back-to-back ALU dependencies are hazards and 
-require one stall cycle so the value is written and then read in the following cycle. For example, 
-after \texttt{SUM R5,R1,R2} the next instruction \texttt{DIF R6,R5,R3} needs a single-cycle stall 
+In this pipeline the producer writes the register in EX of the next cycle, while the consumer reads registers at
+the end of ID in that same cycle. Forwarding is not implemented in this design and we do not assume any
+write-before-read timing inside the register file. Therefore, back-to-back ALU dependencies are hazards and
+require one stall cycle so the value is written and then read in the following cycle. For example,
+after \texttt{SUM R5,R1,R2} the next instruction \texttt{DIF R6,R5,R3} needs a single-cycle stall
 to read the correct value of R5.
 
-When an instruction loads a value from data memory, the value only becomes available at the end of EX. 
-The very next instruction would try to read that value earlier, at the end of ID, and it would still be missing. 
-This is the classic load–use hazard. The fix is simple: insert one stall cycle. In practice, the decode stage 
-holds the pipeline for one cycle when it sees that the instruction in EX is a load that writes the same register 
-the current instruction needs. After that single pause, the value is ready and execution continues normally. As 
-an example, \texttt{MEL R5,R1,imm} followed immediately by \texttt{SUM R6,R5,R3} needs one stall cycle, then it 
+When an instruction loads a value from data memory, the value only becomes available at the end of EX.
+The very next instruction would try to read that value earlier, at the end of ID, and it would still be missing.
+This is the classic load–use hazard. The fix is simple: insert one stall cycle. In practice, the decode stage
+holds the pipeline for one cycle when it sees that the instruction in EX is a load that writes the same register
+the current instruction needs. After that single pause, the value is ready and execution continues normally. As
+an example, \texttt{MEL R5,R1,imm} followed immediately by \texttt{SUM R6,R5,R3} needs one stall cycle, then it
 proceeds.
 
-Control hazards do not cause wrong execution in this design. Branches, jumps and calls are decided in ID and 
-they have a single delay slot. The instruction already fetched in IF is that delay slot and it always runs, 
-no matter whether the branch is taken or not. When the decision is taken, the processor holds fetch for one 
-cycle so no extra instruction is fetched, then it sets the PC to the target and continues. Because the delay 
-slot must execute, there is nothing to flush. If an extra instruction ever slips in beyond the slot, the 
+Control hazards do not cause wrong execution in this design. Branches, jumps and calls are decided in ID and
+they have a single delay slot. The instruction already fetched in IF is that delay slot and it always runs,
+no matter whether the branch is taken or not. When the decision is taken, the processor holds fetch for one
+cycle so no extra instruction is fetched, then it sets the PC to the target and continues. Because the delay
+slot must execute, there is nothing to flush. If an extra instruction ever slips in beyond the slot, the
 control logic turns it into a no-operation so it has no effect.
 
 Flush logic in this processor is minimal. In normal operation there is no need to flush, because the delay-slot instruction always executes and the fetch stage is held for one cycle while the PC is redirected to the branch or jump target. This prevents fetching any wrong-path instructions. If, due to timing, the fetch stage brings in one extra instruction beyond the delay slot, the control unit simply turns that instruction into a no-operation for one cycle. Data hazards are handled by a single stall, not by flushing.
 
-Structural hazards do not appear in this processor. Fetch uses the instruction memory and execute uses the 
-data memory and these memories are separate, so they do not contend. The pipeline issues one instruction 
-per cycle and uses one ALU, so two instructions never try to use the same ALU at the same time. The register 
-file has enough ports (two reads and one write), so reading two registers and writing one in the same cycle 
-is supported. If a read and a write touch the same register in the same cycle, this is not a structural 
+Structural hazards do not appear in this processor. Fetch uses the instruction memory and execute uses the
+data memory and these memories are separate, so they do not contend. The pipeline issues one instruction
+per cycle and uses one ALU, so two instructions never try to use the same ALU at the same time. The register
+file has enough ports (two reads and one write), so reading two registers and writing one in the same cycle
+is supported. If a read and a write touch the same register in the same cycle, this is not a structural
 conflict because the ports exist; if the reader needs the newly written value, that becomes a data hazard
  and we already handle it with a one‑cycle stall. Therefore, no extra stalls are needed for structural reasons.
 
