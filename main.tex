@@ -20,11 +20,13 @@
 \usepackage{tikz}
 \usepackage{longtable}
 \usepackage{pdflscape}
+\usepackage{graphicx}
+\usepackage{pdfpages}
 \usetikzlibrary{positioning, arrows.meta, shapes, calc}
 
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
-
+\graphicspath{ {./img/} }
 
 
 \lstset{
@@ -1493,8 +1495,48 @@ ERROR:
 
 \end{lstlisting}
 
+\subsection{Pipelining}
 
+Now that the instruction set architecture has been defined, the processor can be implemented starting
+from it. In this section, a three stage pipeline design is implemented. The first stage is the instruction
+fetch stage (IF), the second stage is the instruction decode (ID), in which the branches are also resolved,
+and the last stage is the execution stage (EX). In this last stage, the ALU operations are performed, as well as the memory
+accesses for load and store instructions. The memory architecture is Harvard, so there is a separate
+block of memory for instructions and another one for data.
 
+In the fetch stage, we have a program counter (PC) block that is actually a register. It holds the
+address of the instruction to be fetched in the instruction memory. The PC is incremented by 2 every
+cycle by the ADD block, because the instructions are 16 bit wide. The memory for instructions is a
+combinational block that outputs the instruction corresponding to the address given by the PC.
+
+There are two pipeline registers in this design. The first one is between the IF and ID stages, and
+the second one is between the ID and EX stages. All the signals that are passed through these registers
+are stored in them, and then used in the next stage at the next clock cycle.
+
+In the decode stage, there is a "Decode" block that takes care of decoding the RegRdIdx1, RegRdIdx2,
+RegWrIdx, ALUOp, RegWrSel, RegWrEn and Branch. The Register File block contains the 16 registers of
+the processor. It receives RegRdIdx1 and RegRdIdx2 based on which it provides the corresponding
+register values as outputs, into the pipeline register. The sign extension block is also a core components
+of this processor, since we use sign extended immediates in the instructions.
+
+In the execution stage, there is the main unit, which is the ALU block. It receives two operands as
+input and performs the operation specified by ALUOp. The result is then sent to a multiplexer that
+selects between the ALU result and the data memory output. There is also the data memory block, that
+can provide data to load into the Register file. It also receives data to be stored and a signal to
+enable the write operation. At the end of this stage, the multiplexer's output is connected to the
+Register File to write back the result into the specified register.
+
+A special mention has to be made about the stalling mechanism, that is implemented using a special
+control unit. It receives as input the operands of the instruction in the ID stage, as well as the
+ones in the EX stage. If it detects a data hazards, it sends a stall signal the pipeline register
+in between the Fetch and Decode stages. It also sends a stall signal to the PC block, so that it
+does not increment to fetch the next instruction.
+
+\begin{landscape}
+\includepdf[landscape=true]{img/processor.jpg}
+\end{landscape}
+
+\end{document}
 
 
 
