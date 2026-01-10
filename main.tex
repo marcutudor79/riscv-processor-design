@@ -1,8 +1,7 @@
 \documentclass{article}
 \usepackage{graphicx}                            % Required for inserting images
-\usepackage{booktabs}                            % Required for tables
 \usepackage[a4paper, total={6in, 8in}]{geometry} % Adjust page margins
-\usepackage{hyperref}                            % Clickable links
+% \usepackage{hyperref}                            % Clickable links (disabled for minimal TeX install)
 \usepackage{array}
 \usepackage{multirow}
 \usepackage{longtable}
@@ -10,13 +9,17 @@
 \usepackage{tabularx}
 \usepackage{colortbl}
 \usepackage{adjustbox}
+\usepackage{rotating}
 \usepackage{float}
+\usepackage[justification=centering]{caption}
 \usepackage{listings}
 \usepackage{listings}
 
 \usepackage{framed}
 \usepackage[nobreak=true]{mdframed}
 \usepackage{tikz}
+\usepackage{longtable}
+\usepackage{pdflscape}
 \usetikzlibrary{positioning, arrows.meta, shapes, calc}
 
 \setlength{\parindent}{0pt}
@@ -40,6 +43,24 @@
   tabsize=2,
   captionpos=b
 }
+
+% Pipeline diagram colors and macros
+\newcommand{\IF}{\cellcolor{blue!15}IF}
+\newcommand{\ID}{\cellcolor{green!20}ID}
+\newcommand{\EX}{\cellcolor{orange!25}EX}
+\newcommand{\MEM}{\cellcolor{purple!20}MEM}
+\newcommand{\WB}{\cellcolor{gray!20}WB}
+\newcommand{\STALL}{\cellcolor{yellow!30}stall}
+\newcommand{\FLUSH}{\cellcolor{red!25}flush}
+
+% Text-only stage macros for inline use
+\newcommand{\IFtxt}{IF}
+\newcommand{\IDtxt}{ID}
+\newcommand{\EXtxt}{EX}
+\newcommand{\MEMtxt}{MEM}
+\newcommand{\WBtxt}{WB}
+\newcommand{\STALLtxt}{stall}
+\newcommand{\FLUSHtxt}{flush}
 
 \title{Project 1 Exectuion Platforms}
 \author{Hamdane Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
@@ -707,16 +728,290 @@ Here there are no more output sections that esentially do the same thing, such a
 in which the li a0, -1 and ret instructions were repeated three times. The instructions are also
 reordered slightly, but the overall structure remains the same.
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% SECTION 3 RISC-V Architecture
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage
 \section {RISC-V Architecture}
 
+\hspace*{1em} For the following part, a simple RISC-V processor is assumed. It consists of 5 stages Instruction Fetch,
+Instruction Decode, Execute, Memory Access and Write Back (IF, ID, EX, MEM, WB).
+Register operands are read during the ID stage and written back in the WB stage. The arithmetic operations,
+effective address calculations for loads and stores and branch condition evaluation are performed in the
+EX stage, while data memory accesses for load and store instructions occur in the MEM stage. The design
+forwards ALU results to dependent instructions in order to not stall the pipeline.
+
+\hspace*{1em} When a load is consumed immediately by the next instruction, ID inserts a one-cycle stall. It is assumed
+that the memory replies in one cycle. Branches resolve in EX stage, where when taken, the next two fetched
+instructions are flushed and the PC jumps to the branch target.
+
+\subsection{Program Flow (5-stage Pipeline)}
+
+\hspace*{1em} Table \ref{tab:program-flow} below presents the complete sequence of instructions executed until the function terminates with a ret instruction. For each instruction, the current architectural state is shown together with a brief explanation of the program behavior. Pipeline hazards, stalls, forwarding events and branch effects are explicitly identified as they occur.
+The table provides a
+brief explanation of what happens in the processor and program state. At first the processor has the
+registers a0, a1 and a2 set to value 0x200. Register a3 has the value 0x2 and all the other registers
+are set to 0.
+
+The memory contents at the addresses 0x200 through 0x210 is given as follows:
+
+\begin{samepage}
+\captionsetup{skip=2pt}
+
+\begin{table}[H]
+\centering
+\label{tab:memory-initial}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Address} & \textbf{Value} \\
+\hline
+
+0x200 & 0x61 \\
+0x204 & 0x20 \\
+0x208 & 0x62 \\
+0x20C & 0x00 \\
+0x210 & 0x00 \\
+\hline
+\end{tabular}
+\caption{Initial memory contents}
+\end{table}
+
+\vspace{-0.2cm}
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{|c|c|}
+\hline
+\rowcolor{blue!20}
+	\textbf{Address} & \textbf{Value} \\
+\hline
+
+0x200 & 0xc2 \\
+0x204 & 0x40 \\
+0x208 & 0x62 \\
+0x20C & 0x00 \\
+0x210 & 0x00 \\
+\hline
+\end{tabular}
+\caption{Final memory contents after program execution}
+\end{table}
+\end{samepage}
+
+\newpage
+\thispagestyle{empty}
+\begin{landscape}
+\begin{table}
+\label{tab:program-flow}
+\renewcommand{\arraystretch}{2.3}
+\begin{adjustbox}{
+  max width=\paperheight,
+  center
+}
+\begin{tabular}{|c|l|c|c|c|c|c|c|c|c|p{10cm}|p{\textwidth}|}
+\hline
+\rowcolor{blue!20}
+\textbf{PC} & \textbf{Instruction} & \textbf{a0} & \textbf{a1} & \textbf{a2} & \textbf{a3} & \textbf{a4} & \textbf{a5} & \textbf{a6} & \textbf{a7} & \textbf{Explanation} & \textbf{Hazard/Resolution} \\
+\hline
+0x00 & addi a7, a0           & 0x200 & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & \cellcolor{yellow!20}\textbf{0x200} & Copy value of a0 (return register) into a7 (limit address). & - \\
+0x04 & addi a0, a3           & \cellcolor{yellow!20}\textbf{0x2}   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Copy value of a3 (element count) into a0 (return register). & - \\
+0x08 & beq a7, x0, 0x48      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a7]\neq R[x0]\)); \newline normal sequential PC progression, no pipeline flush required. Target: 0x48 = 0x08 + 64. & - \\
+0x0c & beq a1, x0, 0x4c      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a1]\neq R[x0]\)); normal sequential PC progression, no pipeline flush required. Target: 0x50 = 0x0c + 68. & - \\
+0x10 & beq a2, x0, 0x50      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[a2]\neq R[x0]\)); normal sequential PC progression, no pipeline flush required. Target: 0x50 = 0x10 + 64. & - \\
+0x14 & bge x0, a3, 0x54      & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & 0x0   & 0x0   & 0x200 & Branch evaluated in EX stage and found not taken (\(R[x0] < R[a3]\)); normal sequential PC progression, no pipeline flush required. Target: 0x54 = 0x14 + 64. & - \\
+0x18 & addi a5, a7, 0        & 0x2   & 0x200 & 0x200 & 0x2 & 0x0   & \cellcolor{yellow!20}\textbf{0x200} & 0x0   & 0x200 & Initialize source pointer: copy value of a7 into a5 (loop cursor). & - \\
+0x1c & slli a4, a3, 2        & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0x8}   & 0x200 & 0x0   & 0x200 & Compute byte count for n elements: shift a3 left by 2; value in a4 becomes 8. & - \\
+0x20 & add a7, a7, a4        & 0x2   & 0x200 & 0x200 & 0x2 & 0x8   & 0x200 & 0x0   & \cellcolor{yellow!20}\textbf{0x208} & Compute end pointer: a7 = base + (n*4) = 0x208. & - \\
+0x24 & lw a4, 0(a5)          & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0x61}  & 0x200 & 0x0   & 0x208 & Compute address in EX stage (0x200); read word in MEM stage (0x61); write result into a4 in WB. & - \\
+0x28 & lw a6, 0(a1)          & 0x2   & 0x200 & 0x200 & 0x2 & 0x61  & 0x200 & \cellcolor{yellow!20}\textbf{0x61}  & 0x208 & Compute address in EX stage (0x200); read word in MEM stage (0x61); write result into a6 in WB. Next instruction uses a6 immediately, so one cycle stall in ID. & The pipeline encounters a load-use hazard when the next instruction uses a6; \newline the ID stage inserts one stall cycle and then forwards a6 to the EX stage. \\
+0x2c & add a4, a4, a6        & 0x2   & 0x200 & 0x200 & 0x2 & \cellcolor{yellow!20}\textbf{0xc2}  & 0x200 & 0x61  & 0x208 & Add with forwarding: a4 = a4 + a6 = 0xc2. & The forwarding network supplies a6 to the EX stage, so the ALU \newline completes without stalling. \\
+0x30 & sw a4, 0(a2)          & 0x2   & 0x200 & 0x200 & 0x2 & 0xc2  & 0x200 & 0x61  & 0x208 & Compute address in EX stage (0x200); write word in MEM stage (0xc2); memory [0x200] is updated; store uses forwarded a4. & The store uses the forwarded a4 and writes memory without stalling. \\
+0x34 & addi a5, a5, 4        & 0x2   & 0x200 & 0x200 & 0x2 & 0xc2  & \cellcolor{yellow!20}\textbf{0x204} & 0x61  & 0x208 & Advance loop cursor: a5 = a5 + 4. & - \\
+\end{tabular}
+\end{adjustbox}
+\end{table}
+\end{landscape}
+
+\newpage
+\thispagestyle{empty}
+\begin{landscape}
+\begin{table}
+\label{tab:program-flow}
+\renewcommand{\arraystretch}{2.3}
+\begin{adjustbox}{
+  max width=\paperheight,
+  center
+}
+\begin{tabular}{|c|l|c|c|c|c|c|c|c|c|p{\textwidth}|p{\textwidth}|}
+\hline
+\rowcolor{blue!20}
+\textbf{PC} & \textbf{Instruction} & \textbf{a0} & \textbf{a1} & \textbf{a2} & \textbf{a3} & \textbf{a4} & \textbf{a5} & \textbf{a6} & \textbf{a7} & \textbf{Explanation} & \textbf{Hazard/Resolution} \\
+\hline
+0x34 & addi a5, a5, 4        & 0x2   & 0x200 & 0x200 & 0x2 & 0xc2  & \cellcolor{yellow!20}\textbf{0x204} & 0x61  & 0x208 & Advance loop cursor: a5 = a5 + 4. & - \\
+0x38 & addi a1, a1, 4        & 0x2   & \cellcolor{yellow!20}\textbf{0x204} & 0x200 & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Advance source pointer: a1 = a1 + 4. & - \\
+0x3c & addi a2, a2, 4        & 0x2   & 0x204 & \cellcolor{yellow!20}\textbf{0x204} & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Advance destination pointer: a2 = a2 + 4. & - \\
+0x40 & bne a5, a7, -0x1c     & 0x2   & 0x204 & 0x204 & 0x2 & 0xc2  & 0x204 & 0x61  & 0x208 & Branch evaluated in EX stage and found taken (\(R[a5]\neq R[a7]\)); flush the next two instructions; set PC to 0x24. Target: 0x24 = 0x40 + (-0x1c). & The EX stage takes the branch; the fetch unit flushes two instructions and \newline sets the PC to 0x24. \\
+0x24 & lw a4, 0(a5)          & 0x2   & 0x204 & 0x204 & 0x2 & \cellcolor{yellow!20}\textbf{0x20}  & 0x204 & 0x61  & 0x208 & Compute address in EX stage (0x204); read word in MEM stage (0x20); write result into a4 in WB. & - \\
+0x28 & lw a6, 0(a1)          & 0x2   & 0x204 & 0x204 & 0x2 & 0x20  & 0x204 & \cellcolor{yellow!20}\textbf{0x20}  & 0x208 & Compute address in EX stage (0x204); read word in MEM stage (0x20); write result into a6 in WB. Next instruction uses a6 immediately, so one cycle stall in ID. & The pipeline encounters a load-use hazard when the next instruction uses a6; \newline the ID stage inserts one stall cycle and then forwards a6 to the EX stage. \\
+0x2c & add a4, a4, a6        & 0x2   & 0x204 & 0x204 & 0x2 & \cellcolor{yellow!20}\textbf{0x40}  & 0x204 & 0x20  & 0x208 & Add with forwarding: a4 = a4 + a6 = 0x40. & The forwarding network supplies a6 to the EX stage, so the ALU completes \newline without stalling. \\
+0x30 & sw a4, 0(a2)          & 0x2   & 0x204 & 0x204 & 0x2 & 0x40  & 0x204 & 0x20  & 0x208 & Compute address in EX stage (0x204); write word in MEM stage (0x40); memory [0x204] is updated; store uses forwarded a4. & The store uses the forwarded a4 and writes memory without stalling. \\
+0x34 & addi a5, a5, 4        & 0x2   & 0x204 & 0x204 & 0x2 & 0x40  & \cellcolor{yellow!20}\textbf{0x208} & 0x20  & 0x208 & Advance loop cursor: a5 = a5 + 4. & - \\
+0x38 & addi a1, a1, 4        & 0x2   & \cellcolor{yellow!20}\textbf{0x208} & 0x204 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Advance source pointer: a1 = a1 + 4. & - \\
+0x3c & addi a2, a2, 4        & 0x2   & 0x208 & \cellcolor{yellow!20}\textbf{0x208} & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Advance destination pointer: a2 = a2 + 4. & - \\
+0x40 & bne a5, a7, -0x1c     & 0x2   & 0x208 & 0x208 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Branch evaluated in EX stage and found not taken (\(R[a5]= R[a7]\)); normal sequential PC progression, no pipeline flush required. Target: 0x24 = 0x40 + (-0x1c), not taken. & The EX stage resolves the branch as not taken; the PC advances sequentially \newline and no flush occurs. \\
+0x44 & ret                   & 0x2   & 0x208 & 0x208 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Return to \texttt{ra}; a0 already holds the element count (n=0x2). & - \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}
+\end{table}
+\end{landscape}
+
+\newpage
+\hspace*{1em} Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
+
+\subsection{Pipeline Diagram}
+\noindent The following diagrams show the 5-stage pipeline progression for all executed instructions. Colors denote pipeline stages; stalls and flushed wrong-path instructions are highlighted.
+
+\vspace{0.4cm}
+
+\vspace{0.2cm}
+\begin{adjustbox}{width=\textwidth, center}
+\begin{tabular}{|c|l|p{0.7\textwidth}|}
+\hline
+\rowcolor{blue!20}
+  \textbf{Stage} & \textbf{Color} & \textbf{Role and Notes} \\
+\hline
+Instruction Fetch & \IF & Fetches the instruction at the current PC; sequentially increments PC unless a taken branch in \EXtxt \ overrides it. Wrong-path instructions after a taken branch become \FLUSHtxt. \\
+\hline
+Instruction Decode & \ID & Reads source registers and decodes opcode; detects hazards. On a load-use dependency, \IDtxt \ inserts a single \STALLtxt \ bubble before the dependent instruction can enter \EXtxt. \\
+\hline
+Execute & \EX & Performs ALU operations, effective address calculation, and branch resolution. Forwarding supplies operands from prior \EXtxt/\MEMtxt \ results to avoid stalls for ALU dependencies. \\
+\hline
+Memory & \MEM & Reads or writes data memory for loads/stores using the effective address computed in \EXtxt. Load results are available for forwarding after \MEMtxt. \\
+\hline
+Writeback & \WB & Writes results to destination registers (for ALU and loads). Stores do not write back. \\
+\hline
+Stall & \STALL & Represents a bubble introduced to wait for data (e.g. after a load when the very next instruction consumes the loaded value). \\
+\hline
+Flush & \FLUSH & Marks wrong-path instructions fetched before a taken branch resolves in \EXtxt; these do not affect architectural state. \\
+\hline
+\end{tabular}
+\end{adjustbox}
+
+
+\vspace{0.3cm}
+
+
+\noindent \textbf{Pipeline Overview}\\
+\indent The processor uses a classic five-stage in-order pipeline. Instructions advance one stage per cycle unless a hazard forces a stall or a taken branch flushes wrong-path work.\par
+\indent Forwarding sends ALU results from \EXtxt \ and \MEMtxt \ to subsequent instructions, allowing dependent additions (e.g. \texttt{add a4,a4,a6}) to proceed without stalling.\par
+\indent A load-use hazard occurs when the very next instruction needs a loaded value (\texttt{lw} immediately followed by \texttt{add}). The \IDtxt \ stage inserts a one-cycle \STALLtxt \ so that \MEMtxt \ can produce the value and the result is then forwarded into \EXtxt.\par
+\indent Branch resolution happens in \EXtxt. When the branch is taken, the fetch unit flushes the next two wrong-path instructions and redirects the PC to the computed target. When the branch is not taken, the PC advances sequentially.\par
+\indent Stores consume forwarded data (e.g. the new \texttt{a4} value) and update memory in \MEMtxt. They do not introduce additional stalls in this design.\par
+\indent In the diagrams, each row shows an instruction’s stages by cycle (C1, C2, …). \STALLtxt cells indicate bubbles that are inserted and \FLUSHtxt rows show wrong-path instructions that are discarded after a taken branch.
+\vspace{0.2cm}
+
+\newpage
+\noindent \textbf{Setup (PC 0x00–0x20)}\\[0pt]
+\noindent
+\renewcommand{\arraystretch}{1.3}
+\begin{table}[H]
+\centering
+\begin{adjustbox}{width=\textwidth, center}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+Instruction & C1 & C2 & C3 & C4 & C5 & C6 & C7 & C8 & C9 & C10 & C11 & C12 \\
+\hline
+0x00 addi a7,a0 & \IF & \ID & \EX & \MEM & \WB &  &  &  &  &  &  &  \\
+0x04 addi a0,a3 &  & \IF & \ID & \EX & \MEM & \WB &  &  &  &  &  &  \\
+0x08 beq a7,zero,64 (NT) &  &  & \IF & \ID & \EX &  &  &  &  &  &  &  \\
+0x0c beq a1,zero,68 (NT) &  &  &  & \IF & \ID & \EX &  &  &  &  &  &  \\
+0x10 beq a2,zero,64 (NT) &  &  &  &  & \IF & \ID & \EX &  &  &  &  &  \\
+0x14 bge zero,a3,64 (NT) &  &  &  &  &  & \IF & \ID & \EX &  &  &  &  \\
+0x18 addi a5,a7,0 &  &  &  &  &  &  & \IF & \ID & \EX & \MEM & \WB &  \\
+0x1c slli a4,a3,2 &  &  &  &  &  &  &  & \IF & \ID & \EX & \MEM & \WB \\
+0x20 add a7,a7,a4 &  &  &  &  &  &  &  &  & \IF & \ID & \EX & \MEM \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Setup pipeline overview (PC 0x00–0x20): initial instructions advance without stalls; establishes pointers and byte count for the loop.}
+\label{tab:pipeline-setup}
+\end{table}
+
+\vspace{0.4cm}
+\noindent \textbf{Iteration 1 (PC 0x24–0x40, branch taken)}\\[0pt]
+\noindent
+\begin{table}[H]
+\centering
+\begin{adjustbox}{width=\textwidth, center}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+Instruction & C1 & C2 & C3 & C4 & C5 & C6 & C7 & C8 & C9 & C10 & C11 \\
+\hline
+0x24 lw a4,0(a5) & \IF & \ID & \EX & \MEM & \WB &  &  &  &  &  &  \\
+0x28 lw a6,0(a1) &  & \IF & \ID & \EX & \MEM & \WB &  &  &  &  &  \\
+0x2c add a4,a4,a6 &  &  & \IF & \ID & \STALL & \EX (\cellcolor{orange!25}EX\,\textit{fwd}) & \MEM & \WB &  &  &  \\
+0x30 sw a4,0(a2) &  &  &  & \IF & \ID & \EX & \MEM &  &  &  &  \\
+0x34 addi a5,4 &  &  &  &  & \IF & \ID & \EX & \MEM & \WB &  &  \\
+0x38 addi a1,4 &  &  &  &  &  & \IF & \ID & \EX & \MEM & \WB &  \\
+0x3c addi a2,4 &  &  &  &  &  &  & \IF & \ID & \EX & \MEM & \WB \\
+0x40 bne a5,a7,-28 (T) &  &  &  &  &  &  &  & \IF & \ID & \EX (\cellcolor{orange!25}EX\,\textit{branch}) &  \\
+0x44 ret (flushed) &  &  &  &  &  &  &  &  & \IF & \FLUSH &  \\
+0x48 addi a0,-1 (flushed) &  &  &  &  &  &  &  &  &  & \IF & \FLUSH \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Iteration 1 pipeline overview (branch taken): shows load-use stall and forwarding into add; store updates memory; branch resolves taken and flushes wrong-path instructions.}
+\label{tab:pipeline-iter1}
+\end{table}
+
+\newpage
+
+\vspace{0.4cm}
+\noindent \textbf{Iteration 2 and return (PC 0x24–0x44, branch not taken)}\\[0pt]
+\noindent
+\begin{table}[H]
+\centering
+\begin{adjustbox}{width=\textwidth, center}
+\begin{tabular}{|l|c|c|c|c|c|c|c|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+Instruction & C1 & C2 & C3 & C4 & C5 & C6 & C7 & C8 & C9 & C10 & C11 & C12 \\
+\hline
+0x24 lw a4,0(a5) & \IF & \ID & \EX & \MEM & \WB &  &  &  &  &  &  &  \\
+0x28 lw a6,0(a1) &  & \IF & \ID & \EX & \MEM & \WB &  &  &  &  &  &  \\
+0x2c add a4,a4,a6 &  &  & \IF & \ID & \STALL & \EX (\cellcolor{orange!25}EX\,\textit{fwd}) & \MEM & \WB &  &  &  &  \\
+0x30 sw a4,0(a2) &  &  &  & \IF & \ID & \EX & \MEM &  &  &  &  &  \\
+0x34 addi a5,4 &  &  &  &  & \IF & \ID & \EX & \MEM & \WB &  &  &  \\
+0x38 addi a1,4 &  &  &  &  &  & \IF & \ID & \EX & \MEM & \WB &  &  \\
+0x3c addi a2,4 &  &  &  &  &  &  & \IF & \ID & \EX & \MEM & \WB &  \\
+0x40 bne a5,a7,-28 (NT) &  &  &  &  &  &  &  & \IF & \ID & \EX (\cellcolor{orange!25}EX\,\textit{branch}) &  &  \\
+0x44 ret &  &  &  &  &  &  &  &  & \IF & \ID & \EX & \WB \\
+\hline
+\end{tabular}
+\end{adjustbox}
+\caption{Iteration 2 pipeline overview (branch not taken): repeats the sequence with forwarding; branch resolves not taken; execution returns without additional flushes.}
+\label{tab:pipeline-iter2}
+\end{table}
+
+
+\newpage
 \section {Procressor Design}
 \subsection {Instruction Set Architecture}
 
 
-The processor designed in this project uses a fixed instruction width of 16 bits. 
+The processor designed in this project uses a fixed instruction width of 16 bits.
 It includes 16 general-purpose registers, each 32 bits wide, allowing operations on 32-bit data values.
 
-The processor follows a Harvard architecture, with separate instruction and data memories. 
+The processor follows a Harvard architecture, with separate instruction and data memories.
 This design enables simultaneous instruction fetch and data access, which is well suited for pipelined execution.
 
 
@@ -731,42 +1026,42 @@ This design enables simultaneous instruction fetch and data access, which is wel
 \begin{tabular}{|c|c|p{7cm}|}
 \hline
 \rowcolor{blue!20}
-\textbf{Name} & \textbf{Functionality} & \textbf{Description} \\ 
-R0      & Zero Register & Always holds the constant value zero; write operations are ignored.\\ 
+\textbf{Name} & \textbf{Functionality} & \textbf{Description} \\
+R0      & Zero Register & Always holds the constant value zero; write operations are ignored.\\
 R1      & Return Value Register & Hold values returned by functions \\
-R2--R5  & Parameter Registers   & They carry the arguments that are passed to the functions \\ 
-R6--R8  & Temporal Registers    & May be overwritten during function execution \\ 
-R9--R12 & Saved Registers& Retain their contents across function \\       
-R13     & Stack Pointer (SP)    & Indicates the current top of the stack \\ 
-R14     & Link Register (LR)    & Contains the address to resume execution call a function \\ 
-R15     & Program Counter (PC)  & Control the flow of execution \\  \hline 
+R2--R5  & Parameter Registers   & They carry the arguments that are passed to the functions \\
+R6--R8  & Temporal Registers    & May be overwritten during function execution \\
+R9--R12 & Saved Registers& Retain their contents across function \\
+R13     & Stack Pointer (SP)    & Indicates the current top of the stack \\
+R14     & Link Register (LR)    & Contains the address to resume execution call a function \\
+R15     & Program Counter (PC)  & Control the flow of execution \\  \hline
 \end{tabular}
 \caption{Register Usage and Functionality}
 \end{table}
 
 \subsubsection{Instruction Format and Decoding}
 
-The processor is implemented using a fixed 16-bit instruction set architecture that supports six instruction formats: R, I, S, SB, U, and UJ. 
-Each format defines a specific allocation of bits for operands, immediates, and control fields, allowing efficient decoding and execution. 
+The processor is implemented using a fixed 16-bit instruction set architecture that supports six instruction formats: R, I, S, SB, U, and UJ.
+Each format defines a specific allocation of bits for operands, immediates, and control fields, allowing efficient decoding and execution.
 In all instruction formats, bits are listed from the most significant bit (MSB) to the least significant bit (LSB), following standard architectural conventions.
 
 \begin{itemize}
-  \item \textbf{R-Type (Register Instructions):}  
+  \item \textbf{R-Type (Register Instructions):}
   These instructions operate exclusively on registers. The format includes a 2-bit \texttt{Function2} field, a 4-bit source register \texttt{RS2}, a 4-bit source register \texttt{RS1}, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode} field.
 
-  \item \textbf{I-Type (Immediate Instructions):}  
+  \item \textbf{I-Type (Immediate Instructions):}
   Immediate instructions combine register operands with a constant value. This format consists of a 1-bit \texttt{Function1} field, a 5-bit immediate value, a 4-bit source register \texttt{RS1}, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode}.
 
-  \item \textbf{S-Type (Store Instructions):}  
+  \item \textbf{S-Type (Store Instructions):}
   Store instructions write data from a register to memory. The format includes a 1-bit \texttt{Function1} field, a 5-bit immediate value used for address calculation, a 4-bit source register \texttt{RS2} containing the data to be stored, a 4-bit base register \texttt{RS1}, and a 2-bit \texttt{Opcode}.
 
-  \item \textbf{SB-Type (Store Branch Instructions):}  
+  \item \textbf{SB-Type (Store Branch Instructions):}
   Conditional branch instructions modify the control flow based on a register value. This format contains a 10-bit immediate value representing the branch offset, a 4-bit source register \texttt{RS1}, and a 2-bit \texttt{Opcode}.
 
-  \item \textbf{U-Type (Upper Immediate Instructions):}  
+  \item \textbf{U-Type (Upper Immediate Instructions):}
   Upper immediate instructions are used to load larger constant values. The format consists of a 10-bit immediate field, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode}.
 
-  \item \textbf{UJ-Type (Unconditional Jump Instructions):}  
+  \item \textbf{UJ-Type (Unconditional Jump Instructions):}
   Unconditional jump instructions support control transfer operations such as jumps and procedure calls. This format includes a multi-bit \texttt{Function2} field, a 1-bit \texttt{Function1} field, and an immediate field of either 11 bits (for call instructions) or a combination of fixed 7 zero bits and a source register \texttt{RS1}, along with a 2-bit \texttt{Opcode}.
 \end{itemize}
 
@@ -848,7 +1143,7 @@ The operands are sign extended.
 \subsubsection*{R-Type (Register Instructions)}
 
 \paragraph{Addition between registers - SUM}\mbox{}\\
-The \texttt{SUM} instruction performs integer addition between two source registers. 
+The \texttt{SUM} instruction performs integer addition between two source registers.
 It follows the instruction format shown below:
 
 \begin{center}
@@ -874,7 +1169,7 @@ And the instruction has the following binary representation.
 
 
 \paragraph{subtract between registers - DIF}\mbox{}\\
-The \texttt{DIF} instruction performs integer subtract between two source registers. 
+The \texttt{DIF} instruction performs integer subtract between two source registers.
 It follows the instruction format shown below:
 
 \begin{center}
@@ -1007,7 +1302,7 @@ And the instruction has the following binary representation.
 
 
 
-\subsubsection*{ U-Type (Upper Immediate Instructions):}  
+\subsubsection*{ U-Type (Upper Immediate Instructions):}
 
 \paragraph{Move Immediate - SETI Instruction}\mbox{}\\
 The \texttt{SETI} instruction loads an immediate value into a destination register.
@@ -1095,7 +1390,7 @@ And the instruction has the following binary representation.
 
 \paragraph{NOP}\mbox{}\\
 
-A no-operation (NOP) instruction is implemented using the \texttt{SUM R0, R0, R0} instruction. 
+A no-operation (NOP) instruction is implemented using the \texttt{SUM R0, R0, R0} instruction.
 Since register \texttt{R0} is hardwired to zero, the operation produces no side effects and does not modify no register.
 
 \subsubsection*{RET}
@@ -1131,63 +1426,63 @@ CallSum:
 \begin{lstlisting}
   int *in1 R2, int *in2 R3, int *out R3, int n R4
 
-  addv: 
+  addv:
     BNZ R2 , 4
-    NOP 
+    NOP
     GTO ERROR
     NOP
     BNZ R3 , 4
-    NOP 
+    NOP
     GTO ERROR
     NOP
     BNZ R4, 4
-    NOP 
+    NOP
     GTO ERROR
     NOP
-    BNZ R5, 
-  
+    BNZ R5,
+
     SETI R6, 31
     SHR R6, R5, R6
-    BNZ R6, 
-    NOP 
+    BNZ R6,
+    NOP
     SUM R6,R2,R0
-    SETI R8,1 
+    SETI R8,1
     SETI R9,16
     SUM R12,R5,R0
-    
 
-    GTO RETURN 
+
+    GTO RETURN
     NOP
-    
-InEND: 
-    DIF R7, R12, R8 
+
+InEND:
+    DIF R7, R12, R8
     SUM R6, R6, R9
     BNZ R7, 4
-    NOP        
+    NOP
     GTO InEnd
     NOP
-    
+
 LOOP:
-    MEL R8, R2, 0 
+    MEL R8, R2, 0
     MEL R9, R3, 0
-    SUM R10, R9, R8 
-    MES R4, R10, 0 
+    SUM R10, R9, R8
+    MES R4, R10, 0
 
     SUM R2, R2, R9
     SUM R3, R3, R9
     SUM R4, R4, R9
 
-    DIF R7, R6, R2 
+    DIF R7, R6, R2
     BNZ R7, 4
     NOP
-    GTO RETURN 
+    GTO RETURN
     NOP
     GTO LOOP
     NOP
-    
-RETURN 
-    SUM R1, R5, R0 
-    RET 
+
+RETURN
+    SUM R1, R5, R0
+    RET
     NOP
 
 ERROR:
