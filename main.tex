@@ -12,10 +12,34 @@
 \usepackage{adjustbox}
 \usepackage{float}
 \usepackage{listings}
+\usepackage{listings}
+
 \usepackage{framed}
 \usepackage[nobreak=true]{mdframed}
 \usepackage{tikz}
 \usetikzlibrary{positioning, arrows.meta, shapes, calc}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+
+
+\lstset{
+  basicstyle=\ttfamily\small,      % letra de código
+  frame=single,                    % marco alrededor
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  numbers=left,                    % números de línea
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  backgroundcolor=\color{gray!10}, % fondo suave
+  tabsize=2,
+  captionpos=b
+}
 
 \title{Project 1 Exectuion Platforms}
 \author{Hamdane Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
@@ -688,42 +712,497 @@ reordered slightly, but the overall structure remains the same.
 \section {Procressor Design}
 \subsection {Instruction Set Architecture}
 
-For the processor that we are designing, we will have an instruction set based on 16 bit wide instructions.
-There are 16 registers, all of them being 32 bit wide. The processor is of harvard architecture type.
 
-• R0-R1: Return Registers
-• R0-R4: Argument Registers (used to pass up to 4 function arguments)
-• R5-R8: Temporary Registers (not preserved across function calls)
-• R9-R12: Saved Registers (preserved across function calls)
-• R13: Stack Pointer (SP)
-• R14: Return Address Register (RA)
-• R15: Program Counter (PC) (implicit, cannot be directly modified)
+The processor designed in this project uses a fixed instruction width of 16 bits. 
+It includes 16 general-purpose registers, each 32 bits wide, allowing operations on 32-bit data values.
+
+The processor follows a Harvard architecture, with separate instruction and data memories. 
+This design enables simultaneous instruction fetch and data access, which is well suited for pipelined execution.
+
+
+\subsubsection{Register Usage Convention}
+
+
+\begin{table}[h]
+\centering
+\label{tab:registers}
+\rowcolors{2}{gray!10}{white}
+\renewcommand{\arraystretch}{1.6}
+\begin{tabular}{|c|c|p{7cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Name} & \textbf{Functionality} & \textbf{Description} \\ 
+R0      & Zero Register & Always holds the constant value zero; write operations are ignored.\\ 
+R1      & Return Value Register & Hold values returned by functions \\
+R2--R5  & Parameter Registers   & They carry the arguments that are passed to the functions \\ 
+R6--R8  & Temporal Registers    & May be overwritten during function execution \\ 
+R9--R12 & Saved Registers& Retain their contents across function \\       
+R13     & Stack Pointer (SP)    & Indicates the current top of the stack \\ 
+R14     & Link Register (LR)    & Contains the address to resume execution call a function \\ 
+R15     & Program Counter (PC)  & Control the flow of execution \\  \hline 
+\end{tabular}
+\caption{Register Usage and Functionality}
+\end{table}
+
+\subsubsection{Instruction Format and Decoding}
+
+The processor is implemented using a fixed 16-bit instruction set architecture that supports six instruction formats: R, I, S, SB, U, and UJ. 
+Each format defines a specific allocation of bits for operands, immediates, and control fields, allowing efficient decoding and execution. 
+In all instruction formats, bits are listed from the most significant bit (MSB) to the least significant bit (LSB), following standard architectural conventions.
+
+\begin{itemize}
+  \item \textbf{R-Type (Register Instructions):}  
+  These instructions operate exclusively on registers. The format includes a 2-bit \texttt{Function2} field, a 4-bit source register \texttt{RS2}, a 4-bit source register \texttt{RS1}, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode} field.
+
+  \item \textbf{I-Type (Immediate Instructions):}  
+  Immediate instructions combine register operands with a constant value. This format consists of a 1-bit \texttt{Function1} field, a 5-bit immediate value, a 4-bit source register \texttt{RS1}, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode}.
+
+  \item \textbf{S-Type (Store Instructions):}  
+  Store instructions write data from a register to memory. The format includes a 1-bit \texttt{Function1} field, a 5-bit immediate value used for address calculation, a 4-bit source register \texttt{RS2} containing the data to be stored, a 4-bit base register \texttt{RS1}, and a 2-bit \texttt{Opcode}.
+
+  \item \textbf{SB-Type (Store Branch Instructions):}  
+  Conditional branch instructions modify the control flow based on a register value. This format contains a 10-bit immediate value representing the branch offset, a 4-bit source register \texttt{RS1}, and a 2-bit \texttt{Opcode}.
+
+  \item \textbf{U-Type (Upper Immediate Instructions):}  
+  Upper immediate instructions are used to load larger constant values. The format consists of a 10-bit immediate field, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode}.
+
+  \item \textbf{UJ-Type (Unconditional Jump Instructions):}  
+  Unconditional jump instructions support control transfer operations such as jumps and procedure calls. This format includes a multi-bit \texttt{Function2} field, a 1-bit \texttt{Function1} field, and an immediate field of either 11 bits (for call instructions) or a combination of fixed 7 zero bits and a source register \texttt{RS1}, along with a 2-bit \texttt{Opcode}.
+\end{itemize}
+
+The following table presents the instruction formats to clearly illustrate the bit-level structure of each instruction type.
+
+
+\newcolumntype{B}{>{\centering\arraybackslash}p{0.65cm}}
+
+\begin{table}[H]
+\centering
+\label{tab:instruction_formats_16}
+\renewcommand{\arraystretch}{1.4}
+
+\begin{adjustbox}{center}
+\begin{tabular}{|c|BBBBBBBBBBBBBBBB|}
+\hline
+\rowcolor{blue!20}
+\textbf{Type} &
+\multicolumn{16}{c|}{\textbf{Bit Position}} \\ \cline{2-17}
+
+\rowcolor{blue!10}
+ & 15 & 14 & 13 & 12 & 11 & 10 & 9 & 8 & 7 & 6 & 5 & 4 & 3 & 2 & 1 & 0 \\ \hline
+
+R  &
+\multicolumn{2}{c|}{Funct2} &
+\multicolumn{4}{c|}{RS2} &
+\multicolumn{4}{c|}{RS1} &
+\multicolumn{4}{c|}{RD} &
+\multicolumn{2}{c|}{OPCODE} \\ \hline
+
+I  &
+\multicolumn{1}{B|}{Fun1} &
+\multicolumn{5}{c|}{Imm[5:0]} &
+\multicolumn{4}{c|}{RS1} &
+\multicolumn{4}{c|}{RD} &
+\multicolumn{2}{c|}{OPCODE}\\ \hline
+
+S  &
+\multicolumn{1}{B|}{Fun1} &
+\multicolumn{5}{c|}{Imm[5:0]} &
+\multicolumn{4}{c|}{RS2} &
+\multicolumn{4}{c|}{RS1} &
+\multicolumn{2}{c|}{OPCODE} \\ \hline
+
+SB &
+\multicolumn{10}{c|}{Imm[10:0]} &
+\multicolumn{4}{c|}{RS1} &
+\multicolumn{2}{c|}{OPCODE} \\ \hline
+
+U  &
+\multicolumn{10}{c|}{Imm[10:0]} &
+\multicolumn{4}{c|}{RD} &
+\multicolumn{2}{c|}{OPCODE}\\ \hline
+
+UJ CALL &
+\multicolumn{2}{c|}{Funct2} &
+\multicolumn{1}{B|}{Fun1} &
+\multicolumn{11}{c|}{Imm[11:0]} &
+\multicolumn{2}{c|}{OPCODE} \\ \hline
+
+UJ GTO &
+\multicolumn{2}{c|}{Funct2} &
+\multicolumn{1}{B|}{Fun1} &
+\multicolumn{7}{c|}{0} &
+\multicolumn{4}{c|}{RS1} &
+\multicolumn{2}{c|}{OPCODE} \\ \hline
+
+\end{tabular}
+\end{adjustbox}
+\caption{Instruction Formats and Bit Allocation (16-bit ISA)}
+\end{table}
+
+
+
+\subsubsection{Instruction Definition}
 
 The operands are sign extended.
 
-Arithmetic and logic instructions:
-- SUM rd, rs1, rs2  ; rd = rs1 + rs2
-- DIF rd, rs1, rs2  ; rd = rs1 - rs2
-- SHL rd, rs1, rs2  ; rd = rs1 << rs2
+\subsubsection*{R-Type (Register Instructions)}
 
-Load from memory a 32bit value:
-- MEL rd, rs1, imm ; rd = MEM[rs1 + imm] - Memory load
-- MES rd, rs1, imm ; MEM[rs1 + imm] = rd - Memory store
+\paragraph{Addition between registers - SUM}\mbox{}\\
+The \texttt{SUM} instruction performs integer addition between two source registers. 
+It follows the instruction format shown below:
 
-Instruction to copy an immediate value to a register:
-- SET rd, imm ; rd = imm
+\begin{center}
+\texttt{SUM rd, rs1, rs2}: $ rd \leftarrow rs1 + rs2$
+\end{center}
 
-Define a conditional branch instruction having 1 register operand and 10 bit immediate
-- BNZ rs1, imm ; if (rs1 != 0) PC = PC + imm * 2
 
-Define an unconditional jump instruction having 1 register operand (read)
-- GTO rs1 ; PC = rs1
+And the instruction has the following binary representation.
 
-Define a call instruction having 1 imm 9 bits
-- CALL imm ; RA = PC + 2; PC = PC + imm * 2
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct2 [15:14]} & \textbf{RS2 [13:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+0 0 & 4 bits & 4 bits & 4 bits & 1 1  \\ \hline
+\end{tabular}
+\end{table}
 
-Conditional branches, unconditional jumps, and calls in the instruction set have a branch delay slot
-for a single instruction.
+
+
+
+\paragraph{subtract between registers - DIF}\mbox{}\\
+The \texttt{DIF} instruction performs integer subtract between two source registers. 
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{DIF rd, rs1, rs2}: $ rd \leftarrow rs1 - rs2$
+\end{center}
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct2 [15:14]} & \textbf{RS2 [13:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+0 1 & 4 bits & 4 bits & 4 bits & 1 1  \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+\paragraph{Free Instruction}\mbox{}\\
+
+\paragraph{shift right between registers - SHR}\mbox{}\\
+The \texttt{SHR} instruction performs a logical right shift operation between two
+source registers. The value stored in \texttt{rs1} is shifted right by the number
+of bit positions specified in \texttt{rs2}. Zeros are shifted into the most
+significant bits.
+
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{SHR rd, rs1, rs2}: $ rd \leftarrow rs1 \gg rs2 $
+\end{center}
+
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct2 [15:14]} & \textbf{RS2 [13:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+1 0 & 4 bits & 4 bits & 4 bits & 1 1 \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+
+\subsubsection*{I-Type (Immediate Instructions)}
+\paragraph{ Memory Load - MEL }\mbox{}\\
+The \texttt{MEL} instruction loads a 32-bit value from memory into a destination register.
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{MEL rd, rs1, imm}: $rd \leftarrow MEM[rs1 + imm]$
+\end{center}
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct1 [15]} & \textbf{Imm5 [14:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+1 & 5 bits & 4 bits & 4 bits & 0 1 \\ \hline
+\end{tabular}
+\end{table}
+
+
+\subsubsection*{ S-Type (Store Instructions)}
+
+\paragraph{Memory Store Instruction - MES}\mbox{}\\
+The \texttt{MES} instruction stores a 32-bit value from a register into memory.
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{MES rs2, rs1, imm}: $MEM[rs1 + imm] \leftarrow rs2$
+\end{center}
+
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct1 [15]} & \textbf{Imm5 [14:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+0 & 5 bits & 4 bits & 4 bits & 0 1 \\ \hline
+\end{tabular}
+\end{table}
+
+\subsubsection*{SB-Type (Store Branch Instructions):}
+
+\paragraph{ conditional branch - BNZ Instruction}\mbox{}\\
+The \texttt{BNZ} instruction performs a conditional branch based on the value of a source register.
+If the content of the register is not zero, the program counter is updated according to the immediate offset.
+
+\begin{center}
+\texttt{BNZ rs1, imm}: if $(rs1 \neq 0)$ then $PC \leftarrow PC + imm \times 2$
+\end{center}
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Imm [15:6]} & \textbf{RS1 [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+10 bits & 4 bits & 1 0 \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+
+
+
+\subsubsection*{ U-Type (Upper Immediate Instructions):}  
+
+\paragraph{Move Immediate - SETI Instruction}\mbox{}\\
+The \texttt{SETI} instruction loads an immediate value into a destination register.
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{SETI rd, imm}: $rd \leftarrow imm$
+\end{center}
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Imm [15:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
+10 bits & 4 bits &  1 1 \\ \hline
+\end{tabular}
+\end{table}
+
+
+\subsubsection*{UJ-Type (Unconditional Jump Instructions)}
+
+
+\paragraph{Unconditional Jump - GTO Instruction}\mbox{}\\
+The \texttt{GTO} instruction performs an unconditional jump to the address stored in a register.
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{GTO rs1}: $PC \leftarrow rs1$
+\end{center}
+
+And the instruction has the following binary representation.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct2 [15:14]} &
+\textbf{Funct1 [13]} &
+\textbf{Fixed 0 [12:6]} &
+\textbf{RS1 [5:2]} &
+\textbf{Opcode [1:0]} \\ \hline
+1 1 & 0 & 7 bits in zero & 4 bits & 1 1  \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+\paragraph{CALL Instruction}\mbox{}\\
+The \texttt{CALL} instruction performs a procedure call by storing the return address and transferring control to a new program location.
+It follows the instruction format shown below:
+
+\begin{center}
+\texttt{CALL imm}: $RA \leftarrow PC + 2;\; PC \leftarrow PC + imm \times 2$
+\end{center}
+
+And the instruction has the following binary representation.
+
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|c|c|c|c|}
+\hline
+\rowcolor{blue!20}
+\textbf{Funct2 [15:14]} & \textbf{Funct1 [13]} & \textbf{Imm [12:2]} & \textbf{Opcode [1:0]} \\ \hline
+1 1 & 1  & 11 bits & 1 1 \\ \hline
+\end{tabular}
+\end{table}
+
+
+%%% Proponer cambio para usar el registro r0 como 0  y hacer : ADD R0, R0, R0
+
+\subsubsection*{Additional instructions }
+
+
+\paragraph{NOP}\mbox{}\\
+
+A no-operation (NOP) instruction is implemented using the \texttt{SUM R0, R0, R0} instruction. 
+Since register \texttt{R0} is hardwired to zero, the operation produces no side effects and does not modify no register.
+
+\subsubsection*{RET}
+
+A return (RET) operation is implemented by performing an unconditional jump to the address stored in the link register.
+This behavior is achieved using the \texttt{GTO R14} instruction, where register \texttt{R14} (LR) holds the return address saved during a procedure call.
+
+\subsubsection{Test functions in ASM}
+
+\paragraph{Add 2 numbers}\mbox{}\\
+
+\begin{lstlisting}
+AddNumbers:
+    SUM R1, R2, R3   ; R1 = Argument1 + Argument2
+    RET              ; Return using link register (R14)
+    NOP              ; Delay slot
+\end{lstlisting}
+
+\paragraph{Call the AddNumbers function}\mbox{}\\
+
+\begin{lstlisting}
+CallSum:
+    SETI  R2, 65408    ; Load first operand (65408) into R2 (First Argument)
+    SETI  R3, 134      ; Load second operand (134) into R3 (Second argument)
+    CALL  AddNumbers   ; Call AddNumbers function (return address saved in R14)
+    NOP                ; Branch delay slot after CALL
+    RET                ; Return to caller using link register
+    NOP                ; Branch delay slot after RET
+\end{lstlisting}
+
+\subsubsection{Translation of C code to our processor}
+
+\begin{lstlisting}
+  int *in1 R2, int *in2 R3, int *out R3, int n R4
+
+  addv: 
+    BNZ R2 , 4
+    NOP 
+    GTO ERROR
+    NOP
+    BNZ R3 , 4
+    NOP 
+    GTO ERROR
+    NOP
+    BNZ R4, 4
+    NOP 
+    GTO ERROR
+    NOP
+    BNZ R5, 
+  
+    SETI R6, 31
+    SHR R6, R5, R6
+    BNZ R6, 
+    NOP 
+    SUM R6,R2,R0
+    SETI R8,1 
+    SETI R9,16
+    SUM R12,R5,R0
+    
+
+    GTO RETURN 
+    NOP
+    
+InEND: 
+    DIF R7, R12, R8 
+    SUM R6, R6, R9
+    BNZ R7, 4
+    NOP        
+    GTO InEnd
+    NOP
+    
+LOOP:
+    MEL R8, R2, 0 
+    MEL R9, R3, 0
+    SUM R10, R9, R8 
+    MES R4, R10, 0 
+
+    SUM R2, R2, R9
+    SUM R3, R3, R9
+    SUM R4, R4, R9
+
+    DIF R7, R6, R2 
+    BNZ R7, 4
+    NOP
+    GTO RETURN 
+    NOP
+    GTO LOOP
+    NOP
+    
+RETURN 
+    SUM R1, R5, R0 
+    RET 
+    NOP
+
+ERROR:
+    SETI R1, -1
+    RET
+
+
+
+\end{lstlisting}
+
+
+
+
+
+
 
 %% Deﬁne how the 16 registers have to be used by the programmer. In particular deﬁne how
 %% arguments are passed on function calls for functions with up to 4 arguments. Deﬁne how
