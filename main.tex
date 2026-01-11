@@ -91,14 +91,43 @@
 \newcommand{\STALLtxt}{stall}
 \newcommand{\FLUSHtxt}{flush}
 
-\title{Project 1 Exectuion Platforms}
-\author{Hamdane Brini, Wilches Juan, Barau Elena, Marculescu Tudor}
-\date{January 2025}
+
+
+
 
 \begin{document}
 
-\maketitle
 
+\begin{titlepage}
+    \begin{center}
+        {\includegraphics[width=0.4\textwidth]{telecomparis.png} \par}
+        \vspace{1cm}
+        {\bfseries\LARGE Télécom Paris \par}
+        \vspace{1cm}
+        \vspace{2cm}
+        {\scshape\Huge Project 1\par}
+        \vspace{1cm}
+            {\itshape\Large Execution Platforms \par}
+        \vspace{2cm}
+        \vfill
+        {\Large Members: \par}
+        {\Large Barau  Elena\par}
+        {\Large Hamdane Brini\par}
+        {\Large Marculescu Tudor\par}
+        {\Large Wilches Juan\par}
+        
+        
+        \vfill
+      
+        \vfill
+        {\Large January 2026 \par}
+    \end{center}
+\end{titlepage}
+\clearpage
+
+
+\tableofcontents
+\clearpage
 \newpage
 
 \section{Introduction to RISC-V Instruction Set Architecture}
@@ -1195,7 +1224,9 @@ UJ GTO &
 
 \subsubsection{Instruction Definition}
 
-The operands are sign extended.
+\paragraph{Operation}\mbox{}\\
+Immediate operands are sign extended before the operation is performed.
+
 
 \subsubsection*{R-Type (Register Instructions)}
 
@@ -1356,9 +1387,6 @@ And the instruction has the following binary representation.
 
 
 
-
-
-
 \subsubsection*{ U-Type (Upper Immediate Instructions):}
 
 \paragraph{Move Immediate - SETI Instruction}\mbox{}\\
@@ -1395,7 +1423,7 @@ It follows the instruction format shown below:
 \texttt{GTO rs1}: $PC \leftarrow rs1$
 \end{center}
 
-And the instruction has the following binary representation.
+The \texttt{STI} instruction supports labels in its immediate field, which are resolved to addresses by the compiler. The instruction has the following binary representation.
 
 \begin{table}[H]
 \centering
@@ -1420,10 +1448,10 @@ The \texttt{CALL} instruction performs a procedure call by storing the return ad
 It follows the instruction format shown below:
 
 \begin{center}
-\texttt{CALL imm}: $RA \leftarrow PC + 2;\; PC \leftarrow PC + imm \times 2$
+\texttt{CALL imm}: $R14 \leftarrow PC + 2;\; PC \leftarrow  imm $
 \end{center}
 
-And the instruction has the following binary representation.
+The immediate operand of the \texttt{CALL} instruction may be specified as a label, as the compiler is responsible for resolving the label and substituting it with the corresponding address. The instruction has the following binary representation.
 
 
 
@@ -1548,7 +1576,7 @@ LOOP:
     MEL R8, R2, 0    ; Load vector1[i] into a register
     MEL R9, R3, 0    ; Load vector2[i] into a register
     SUM R10, R9, R8  ; Add the loaded values
-    MES R4, R10, 0   ; Store the result into out[i]
+    MES R10, R4, 0   ; Store the result into out[i]
 
     SUM R2, R2, R11  ; Advance pointer to the next element of vector1
     SUM R3, R3, R11  ; Advance pointer to the next element of vector2
