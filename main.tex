@@ -108,13 +108,16 @@
         {\scshape\Huge Project 1\par}
         \vspace{1cm}
             {\itshape\Large Execution Platforms \par}
-        \vspace{2cm}
         \vfill
+        \vspace{1cm}
+            {\itshape\Large Professor: BRANDNER Florian \par}
+        \vspace{2cm}
+
         {\Large Members: \par}
-        {\Large Barau  Elena\par}
-        {\Large Hamdane Brini\par}
-        {\Large Marculescu Tudor\par}
-        {\Large Wilches Juan\par}
+        {\Large BARAU  Elena\par}
+        {\Large HAMDANE Brini\par}
+        {\Large MARCULESCU Tudor\par}
+        {\Large WILCHES Juan\par}
         
         
         \vfill
@@ -128,6 +131,10 @@
 
 \tableofcontents
 \clearpage
+\listoftables
+\listoffigures
+
+
 \newpage
 
 \section{Introduction to RISC-V Instruction Set Architecture}
@@ -959,8 +966,6 @@ Flush & \FLUSH & Marks wrong-path instructions fetched before a taken branch res
 \hline
 \end{tabular}
 \end{adjustbox}
-
-
 \vspace{0.3cm}
 
 
@@ -1150,32 +1155,32 @@ R  &
 
 I  &
 \multicolumn{1}{B|}{Fun1} &
-\multicolumn{5}{c|}{Imm[5:0]} &
+\multicolumn{5}{c|}{Imm[4:0]} &
 \multicolumn{4}{c|}{RS1} &
 \multicolumn{4}{c|}{RD} &
 \multicolumn{2}{c|}{OPCODE}\\ \hline
 
 S  &
 \multicolumn{1}{B|}{Fun1} &
-\multicolumn{5}{c|}{Imm[5:0]} &
+\multicolumn{5}{c|}{Imm[4:0]} &
 \multicolumn{4}{c|}{RS2} &
 \multicolumn{4}{c|}{RS1} &
 \multicolumn{2}{c|}{OPCODE} \\ \hline
 
 SB &
-\multicolumn{10}{c|}{Imm[10:0]} &
+\multicolumn{10}{c|}{Imm[9:0]} &
 \multicolumn{4}{c|}{RS1} &
 \multicolumn{2}{c|}{OPCODE} \\ \hline
 
 U  &
-\multicolumn{10}{c|}{Imm[10:0]} &
+\multicolumn{10}{c|}{Imm[9:0]} &
 \multicolumn{4}{c|}{RD} &
 \multicolumn{2}{c|}{OPCODE}\\ \hline
 
 UJ CALL &
 \multicolumn{2}{c|}{Funct2} &
 \multicolumn{1}{B|}{Fun1} &
-\multicolumn{11}{c|}{Imm[11:0]} &
+\multicolumn{11}{c|}{Imm[10:0]} &
 \multicolumn{2}{c|}{OPCODE} \\ \hline
 
 UJ GTO &
@@ -1221,6 +1226,8 @@ And the instruction has the following binary representation.
 \textbf{Funct2 [15:14]} & \textbf{RS2 [13:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 0 0 & 4 bits & 4 bits & 4 bits & 1 1  \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{SUM} instruction}
+
 \end{table}
 
 
@@ -1246,6 +1253,8 @@ And the instruction has the following binary representation.
 \textbf{Funct2 [15:14]} & \textbf{RS2 [13:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 0 1 & 4 bits & 4 bits & 4 bits & 1 1  \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{DIF} instruction}
+
 \end{table}
 
 
@@ -1277,6 +1286,8 @@ And the instruction has the following binary representation.
 \textbf{Funct2 [15:14]} & \textbf{RS2 [13:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 1 0 & 4 bits & 4 bits & 4 bits & 1 1 \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{SHR} instruction}
+
 \end{table}
 
 
@@ -1303,6 +1314,8 @@ And the instruction has the following binary representation.
 \textbf{Funct1 [15]} & \textbf{Imm5 [14:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 1 & 5 bits & 4 bits & 4 bits & 0 1 \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{MEL} instruction}
+
 \end{table}
 
 
@@ -1329,6 +1342,8 @@ And the instruction has the following binary representation.
 \textbf{Funct1 [15]} & \textbf{Imm5 [14:10]} & \textbf{RS1 [9:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 0 & 5 bits & 4 bits & 4 bits & 0 1 \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{MES} instruction}
+
 \end{table}
 
 \subsubsection*{SB-Type (Store Branch Instructions):}
@@ -1353,6 +1368,8 @@ And the instruction has the following binary representation.
 \textbf{Imm [15:6]} & \textbf{RS1 [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 10 bits & 4 bits & 1 0 \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{BNZ} instruction}
+
 \end{table}
 
 
@@ -1379,6 +1396,8 @@ And the instruction has the following binary representation.
 \textbf{Imm [15:6]} & \textbf{RD [5:2]} & \textbf{Opcode [1:0]} \\ \hline
 10 bits & 4 bits &  1 1 \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{SETI} instruction}
+
 \end{table}
 
 
@@ -1409,6 +1428,8 @@ The \texttt{STI} instruction supports labels in its immediate field, which are r
 \textbf{Opcode [1:0]} \\ \hline
 1 1 & 0 & 7 bits in zero & 4 bits & 1 1  \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{GTO} instruction}
+
 \end{table}
 
 
@@ -1418,8 +1439,17 @@ The \texttt{CALL} instruction performs a procedure call by storing the return ad
 It follows the instruction format shown below:
 
 \begin{center}
-\texttt{CALL imm}: $R14 \leftarrow PC + 2;\; PC \leftarrow  imm $
+\texttt{CALL imm}: $R14 \leftarrow PC + 6;\; PC \leftarrow  imm $
 \end{center}
+
+The \texttt{CALL} instruction is decoded as the combination of three simpler instructions in order to simplify its hardware implementation, since the architecture does not provide a dedicated instruction for adding an immediate value.
+
+\begin{itemize}
+  \item \texttt{SETI R6, 6} – Load the constant offset corresponding to \texttt{PC + 2}.
+  \item \texttt{SUM R14, PC, R6} – Store the return address in register \texttt{R14}.
+  \item \texttt{SETI PC, imm} – Update the program counter with the target address.
+\end{itemize}
+
 
 The immediate operand of the \texttt{CALL} instruction may be specified as a label, as the compiler is responsible for resolving the label and substituting it with the corresponding address. The instruction has the following binary representation.
 
@@ -1435,6 +1465,7 @@ The immediate operand of the \texttt{CALL} instruction may be specified as a lab
 \textbf{Funct2 [15:14]} & \textbf{Funct1 [13]} & \textbf{Imm [12:2]} & \textbf{Opcode [1:0]} \\ \hline
 1 1 & 1  & 11 bits & 1 1 \\ \hline
 \end{tabular}
+\caption{Binary encoding of the \texttt{CALL} instruction}
 \end{table}
 
 

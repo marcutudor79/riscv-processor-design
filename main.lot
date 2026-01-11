@@ -1,0 +1,21 @@
+\contentsline {table}{\numberline {1}{\ignorespaces Decomposition of Hex Codes to RISC-V Instruction Format}}{3}{}%
+\contentsline {table}{\numberline {2}{\ignorespaces RISC-V Instructions with register numbers, symbolic names and addresses}}{4}{}%
+\contentsline {table}{\numberline {3}{\ignorespaces RISC-V Instructions with Addresses}}{7}{}%
+\contentsline {table}{\numberline {4}{\ignorespaces Return values of the program}}{8}{}%
+\contentsline {table}{\numberline {5}{\ignorespaces Initial memory contents}}{15}{}%
+\contentsline {table}{\numberline {6}{\ignorespaces Final memory contents after program execution}}{15}{}%
+\contentsline {table}{\numberline {7}{\ignorespaces Program flow with pipeline notes and hazards (changed registers highlighted)}}{17}{}%
+\contentsline {table}{\numberline {8}{\ignorespaces Setup pipeline overview (PC 0x00–0x20): initial instructions advance without stalls; establishes pointers and byte count for the loop.}}{19}{}%
+\contentsline {table}{\numberline {9}{\ignorespaces Iteration 1 pipeline overview (branch taken): shows load-use stall and forwarding into add; store updates memory; branch resolves taken and flushes wrong-path instructions.}}{19}{}%
+\contentsline {table}{\numberline {10}{\ignorespaces Iteration 2 pipeline overview (branch not taken): repeats the sequence with forwarding; branch resolves not taken; execution returns without additional flushes.}}{20}{}%
+\contentsline {table}{\numberline {11}{\ignorespaces Register Usage and Functionality}}{21}{}%
+\contentsline {table}{\numberline {12}{\ignorespaces Instruction Formats and Bit Allocation (16-bit ISA)}}{22}{}%
+\contentsline {table}{\numberline {13}{\ignorespaces Binary encoding of the \texttt {SUM} instruction}}{23}{}%
+\contentsline {table}{\numberline {14}{\ignorespaces Binary encoding of the \texttt {DIF} instruction}}{23}{}%
+\contentsline {table}{\numberline {15}{\ignorespaces Binary encoding of the \texttt {SHR} instruction}}{24}{}%
+\contentsline {table}{\numberline {16}{\ignorespaces Binary encoding of the \texttt {MEL} instruction}}{24}{}%
+\contentsline {table}{\numberline {17}{\ignorespaces Binary encoding of the \texttt {MES} instruction}}{24}{}%
+\contentsline {table}{\numberline {18}{\ignorespaces Binary encoding of the \texttt {BNZ} instruction}}{25}{}%
+\contentsline {table}{\numberline {19}{\ignorespaces Binary encoding of the \texttt {SETI} instruction}}{25}{}%
+\contentsline {table}{\numberline {20}{\ignorespaces Binary encoding of the \texttt {GTO} instruction}}{25}{}%
+\contentsline {table}{\numberline {21}{\ignorespaces Binary encoding of the \texttt {CALL} instruction}}{26}{}%
