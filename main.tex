@@ -490,10 +490,10 @@ processing finished and the result is ready & number of processed elements      
 \section{RISC-V Tool Chain}
 
 \subsection {Reimagined C Code}
-The above explanation of the program's functionality allows us to reimagine the C code that could
-have generated the assembly instructions that were previously described. To do so, one can have an
-intuition on what certain assembly instructions would mean. For example, for the part of input
-validation, the conditinal branches checks can be equivalent to the if statements of C language.
+The assenbly instructions previously described allows us to reimagine the C code that could
+have generated them. To do so, one can have an intuition on what certain assembly instructions
+would be transformed to in ASM by the compiler. For example, for the part of input validation,
+the conditinal branches checks can be equivalent to the if statements of C language.
 
 \begin{mdframed}
 
@@ -577,7 +577,7 @@ the object file "se201-prog.o" from the C source file "se201-prog.c":
 riscv64-linux-gnu-gcc -g -O0 -mcmodel=medlow -mabi=ilp32 -march=rv32im -Wall -c -o se201-prog.o se201-prog.c
 \end{framed}
 
-A fair mention is that in order to have a compilible C program, one needs to provide a main function as
+A fair mention is that in order to have a compilable C program, one needs to provide a main function as
 an entry point. In it, the input arrays and the output array are defined, along with the number of
 elements to be processed. The call to the addv function, which was seen previously, is also made in
 main.
@@ -695,11 +695,10 @@ without using the stack at all. The same phenomenon can be observed for the loop
 each element is taken out of the stack, for example the address of the first input array element, which
 is used to load the element, then the adress of the second input array element is taken out of the stack
 to load the element. They are added and then the address of the output array element is taken out of the
-stack to store the result. Finally, the addresses of the of the three arrays can be retaken out of the stack,
+stack to store the result. In the end, the addresses of the of the three arrays can be retaken out of the stack,
 incremented by 4 and stored back on the stack.
 
-Finally, the return part is similar, with the difference that actually a ret instruction is used instead
-of jalr zero, ra, 0.
+Finally, the return part is the same.
 
 \subsection{Changing the Optimization Level}
 By switching the optimization level from -O0 to -O, the generated assembly code changes significatly.
@@ -753,7 +752,7 @@ in the first section. Below is a snippet of the generated assembly instructions:
 
 Firstly, the stack usage is eliminated completely and the function arguments are used directly from
 the registers. Secondly, the input validation part is more efficient, as it uses beqz instructions
-that jump directly to the return -1 section. The same phenomenon happens where a5 and a7 are used
+that jump directly to the return -1 section. Also, a5 and a7 are used
 as loop counter and address of the last element to be processed, respectively. This version of code
 is very similar to the one provided in the first section, with only minor differencces in the return
 sections, that use li instead of addi and ret instead of jalr zero, ra, 0.
@@ -959,13 +958,12 @@ The memory contents at the addresses 0x200 through 0x210 is given as follows:
 0x44 & ret                   & 0x2   & 0x208 & 0x208 & 0x2 & 0x40  & 0x208 & 0x20  & 0x208 & Return to \texttt{ra}; a0 already holds the element count (n=0x2). & - \\ \hline
 \end{tabularx}%
 }
-\caption{Program flow with pipeline notes and hazards (changed registers highlighted)}
+\caption{Program flow with pipeline notes and hazards (changed registers highlighted.)}\label{tab:program-flow}
 \end{table}
-
+Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
 \end{landscape}
 
 \newpage
-Note: In the actual code, \texttt{jalr zero, ra, 0} encodes the \texttt{ret} pseudoinstruction, returning to the address held in \texttt{ra}.
 
 \subsection{Pipeline Diagram}
 \noindent The following diagrams show the 5-stage pipeline progression for all executed instructions. Colors denote pipeline stages; stalls and flushed wrong-path instructions are highlighted.
