@@ -118,10 +118,10 @@
         {\Large HAMDANE Brini\par}
         {\Large MARCULESCU Tudor\par}
         {\Large WILCHES Juan\par}
-        
-        
+
+
         \vfill
-      
+
         \vfill
         {\Large January 2026 \par}
     \end{center}
@@ -141,7 +141,7 @@
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
-% SECTION 4 Introduction to RISC-V Instruction Set Architecture
+% SECTION 1 Introduction to RISC-V Instruction Set Architecture
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
@@ -149,13 +149,12 @@
 
 In this section we are focusing on retrieving the RISC-V assembly instructions in human readable format,
 from their hexadecimal representation.
-The instruction format is determined based on the opcode, funct3 and funct7 fields. Table 1 depicts a
+The instruction format is determined based on the opcode, funct3 and funct7 fields. Table \ref{tab:instruction-decomposition} depicts a
 detailed translation of each instruction from it's hex code to it's format fields.
 
 \subsection{Program Instructions Decomposition}
 \begin{table}[H]
 \raggedright
-\label{tab:instruction-decomposition}
 \vspace{0.3cm}
 \renewcommand{\arraystretch}{2}
 \begin{adjustbox}{width=\textwidth, center}
@@ -199,16 +198,15 @@ detailed translation of each instruction from it's hex code to it's format field
     \footnotesize\item SB-type: imm[X:X] (11:7) = imm[4:1$|$11] (11:7) and imm[X:X] (31:25) = imm[12$|$10:5] (31:25)
 \end{itemize}
 
-\caption{Decomposition of Hex Codes to RISC-V Instruction Format}
+\caption{Decomposition of Hex Codes to RISC-V Instruction Format}\label{tab:instruction-decomposition}
 \end{table}
 
 A point to note is that the immediate fields for UJ and U type instructions are missing from Table 1.
-This is because the provided program is missing them. There is also an overlap between the immediates
+This is because the provided program is not containing them. There is also an overlap between the immediates
 of S and SB type instructions, as they share the same positions in the instruction format.
 
 \begin{table}[H]
 \centering
-\label{tab:instructions-simple}
 \vspace{0.3cm}
 \renewcommand{\arraystretch}{1.6} % Increases row height for all rows
 \begin{tabular}{|c|c|c|c|}
@@ -243,25 +241,25 @@ of S and SB type instructions, as they share the same positions in the instructi
 0x54 & 0x00008067 & jalr zero, ra, 0   & jalr x0, x1, 0     \\
 \hline
 \end{tabular}
-\caption{RISC-V Instructions with register numbers, symbolic names and addresses}
+\caption{RISC-V Instructions with register numbers, symbolic names and addresses}\label{tab:instructions-reg}
 \end{table}
 
-In order to better understand the provided program, Table 2 is introduced to map the hex codes with
+In order to better understand the provided program, Table \ref{tab:instructions-reg} is introduced to map the hex codes with
 their corresponding assembly instructions. As an overall view, the program is making use of RV32I instruction
 set only. The registers are represented in both their symbolic names (ABI) and x-register numbers.
-in order to facilitate the understanding of the program.
+in order to facilitate the understanding of the program. To check the correctness of the decoding, an open
+source tool was used to redecode the hex values. It can be refereced at \cite{RISCV-decoding-website}.
 
 \subsection{Branch Delay Slot Concept}
 The branch delay slot concept is interesting when discussing pipelined processors. Essentially, when
 a branch is taken, instructions fetched after the branch become
-invalid if there is no branch prediction mechanism. In early implementations, this issue was handled
+invalid if the processor does not have a branch prediction mechanism. In early implementations, this issue was handled
 by filling the instruction following the branch with a no-operation (NOP) in order to preserve
 the normal functioning of the pipeline. However, the problem with this solution is that cycles are wasted doing nothing.
 
-A more efficient approach consists of executing a useful instruction right after the branch (the delay slot).
-This instruction is chosen such that it can be executed safely regardless of the branch decision. As a result,
-the instruction placed in the delay slot is always executed, whether the branch is taken or not.
-This technique helps reduce the performance penalty caused by pipeline flushing after branch instructions.
+A more efficient approach consists of executing an useful instruction right after the branch (the delay slot).
+This instruction is chosen such that it can be executed regardless if the branch is taken or not. Therefore,
+the technique helps to reduce the performance penalty caused by pipeline flushing after branch instructions.
 
 As explained in \cite{Stack-overflow-branch-delay}: “\textit{The idea of the branch shadow or delay
 slot is to recover part of the clock cycles. If the instruction after a branch is always
@@ -366,11 +364,12 @@ For disadvantages:
 
 \begin{itemize}
 
-\item Branch delay slots may create complications in code debugging, since the instruction in the delay slot
-might have side effects, it may lead to an unexpected state of the registers and memory.
-
 \item It adds to the waiting time when trying to execute interruptions, since they will be deffered until
 the delay slot instruction is executed. This is a problem in the case of real time systems.
+
+\item Additional logic is required for the compiler to be able to fill the delay slots effectively.
+Since it is not always possible to find a suitable instruction in the proximity of the branch,
+the task becomes difficult, requiring algorithms that can analyze the instruction flow and dependencies.
 
 \item Software compatibility requirements dictate that an architecture may not change the number of delay
 slots from one generation to the next. This inevitably requires that newer hardware implementations
@@ -390,7 +389,7 @@ expensive to implement.
 
 \end{itemize}
 
-Nowadays, the branch delay slot concept bacame obsolete, as modern processors use branch prediction
+Nowadays, the branch delay slot concept became obsolete, as modern processors use branch prediction
 techniques to mitigate the braching performance penalty. This also mitigates the complications of
 having the compiler finding suitable instructions to fill the delay slots.
 
@@ -398,11 +397,11 @@ having the compiler finding suitable instructions to fill the delay slots.
 
 \subsection{Branch Instructions Analysis}
 In order to understand better the provided program, it is useful to check the branch instructions and
-where they lead to.
+where they lead to. Table \ref{tab:branch-instructions} summarizes them showing the instructions that
+are executed if the branch is taken.
 
 \begin{table}[H]
 \centering
-\label{tab:instructions-simple}
 \vspace{0.3cm}
 \renewcommand{\arraystretch}{1.6} % Increases row height for all rows
 \begin{tabular}{|c|c|l|}
@@ -419,15 +418,16 @@ where they lead to.
 
 \hline
 \end{tabular}
-\caption{RISC-V Instructions with Addresses}
+\caption{Branch instructions analysis}\label{tab:branch-instructions}
 \end{table}
 
-From the table above we can see that there are 4 first conditional branches, that being the
+We can see that there are 4 first conditional branches, that being the
 addresses 0x08, 0x0c, 0x10 and 0x14, which resemble input value checks. Considering the calling
 convention for RISC-V, the registers a0-a7 are used for passing function arguments from the caller
 to the callee. In this case, the supposition of input value checks is valid. The first three jump
 to a return -1 in case the input values are 0, while the fourth one jumps to a return with the number
-of elements to be processed, which would be less than or equal to 0.
+of elements to be processed, which would be less than or equal to 0. The RISC-V ISA Manual \cite{RISC-V-ISA-Manual}
+was useful to determine the behaviour if the branch instructions.
 
 The last conditional branch at address 0x40 is part of a loop. It checks whether the address stored
 in register a5, used as a counter, is equal to the last address to be processed, which is stored in
@@ -437,8 +437,8 @@ the next elements. If they are equal, the program continues to the return instru
 \subsection{Program Functionality}
 
 The program can be divided into three main parts: input validation, processing loop, and return value.
-The input validation part checks if any of the first three caller arguments are 0. The arguments are
-passed are actually pointers to the input and output arrays, so they are checked if they are null,
+The input validation part checks if any of the first three caller arguments are 0. The arguments that are
+passed, are actually pointers to the input and output arrays, so they are checked if they are null,
 which would indicate an invalid memory access, therefore leading to a jump to the section of the
 program corresponding to return -1. The fourth argument is the number of elements to be processed,
 which is checked in the register a3 to see if it is less than or equal to 0. In case it is, the program
@@ -446,7 +446,7 @@ jumps to the section corresponding to return, with the number of elements to be 
 
 The processing loop starts at address 0x18 and continues until the branch instruction at address 0x40
 It consists of an initial setup for the loop counter in register a5 and for the final value of the
-counter, which is stored in register a7. Register a7 will store the address of the last element to be processed from
+counter, which is stored in register a7. Afterwards, it will get updated to the address of the last element to be processed from
 one of the input arrays, calculated as the base address plus the number of elements multiplied by 4,
 the size of each element. Because the elements are 4 bytes long, it can be extrapolated that the arrays
 are made of 32-bit integers. The loop itself consists of loading the elements from both input arrays,
@@ -468,16 +468,16 @@ number of elements to be processed.
 \begin{tabular}{|c|c|l|}
 \hline
 \rowcolor{blue!20}
-\textbf{Scenario} & \textbf{Return value} \\
+\textbf{Input variables values} & \textbf{Return value} \\
 \hline
 
-input pointers are null & -1 \\
-number of elements to be processed $\leq$ 0 & number of elemnts to be processed \\
+input pointers are null, n is whatever value & -1 \\
+valid input pointers and n, number of elements to be processed, $\leq$ 0 & number of elemnts to be processed \\
 processing finished and the result is ready & number of processed elements      \\
 
 \hline
 \end{tabular}
-\caption{Return values of the program}
+\caption{Return values of the program based on the input variables}
 \end{table}
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
