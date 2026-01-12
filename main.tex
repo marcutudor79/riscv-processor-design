@@ -22,6 +22,7 @@
 \usepackage{pdflscape}
 \usepackage{graphicx}
 \usepackage{pdfpages}
+
 \usetikzlibrary{positioning, arrows.meta, shapes, calc}
 
 \setlength{\parindent}{0pt}
@@ -1157,7 +1158,7 @@ In all instruction formats, bits are listed from the most significant bit (MSB) 
   Upper immediate instructions are used to load larger constant values. The format consists of a 10-bit immediate field, a 4-bit destination register \texttt{RD}, and a 2-bit \texttt{Opcode}.
 
   \item \textbf{UJ-Type (Unconditional Jump Instructions):}
-  Unconditional jump instructions support control transfer operations such as jumps and procedure calls. This format includes a multi-bit \texttt{Function2} field, a 1-bit \texttt{Function1} field, and an immediate field of either 11 bits (for call instructions) or a combination of fixed 7 zero bits and a source register \texttt{RS1}, along with a 2-bit \texttt{Opcode}.
+  Unconditional jump instructions support control transfer operations such as jumps and procedure calls. This format includes a multi-bit \texttt{Function2} field, a 1-bit \texttt{Function3} field, and an immediate field of either 11 bits (for call instructions) or a combination of fixed 7 zero bits and a source register \texttt{RS1}, along with a 2-bit \texttt{Opcode}.
 \end{itemize}
 
 The following table presents the instruction formats to clearly illustrate the bit-level structure of each instruction type.
@@ -1213,13 +1214,13 @@ U  &
 
 UJ CALL &
 \multicolumn{2}{c|}{Funct2} &
-\multicolumn{1}{B|}{Fun1} &
+\multicolumn{1}{B|}{Fun3} &
 \multicolumn{11}{c|}{Imm[10:0]} &
 \multicolumn{2}{c|}{OPCODE} \\ \hline
 
 UJ GTO &
 \multicolumn{2}{c|}{Funct2} &
-\multicolumn{1}{B|}{Fun1} &
+\multicolumn{1}{B|}{Fun3} &
 \multicolumn{7}{c|}{0} &
 \multicolumn{4}{c|}{RS1} &
 \multicolumn{2}{c|}{OPCODE} \\ \hline
@@ -1291,7 +1292,7 @@ And the instruction has the following binary representation.
 
 \end{table}
 
-
+\newpage
 
 \paragraph{Free Instruction}\mbox{}\\
 
@@ -1469,25 +1470,23 @@ The \texttt{STI} instruction supports labels in its immediate field, which are r
 
 
 \paragraph{CALL Instruction}\mbox{}\\
-The \texttt{CALL} instruction performs a procedure call by storing the return address and transferring control to a new program location.
+The \texttt{CALL} instruction performs a procedure call by transferring control to a new program location.
 It follows the instruction format shown below:
 
 \begin{center}
-\texttt{CALL imm}: $R14 \leftarrow PC + 6;\; PC \leftarrow  imm $
+\texttt{CALL imm}: $ PC \leftarrow  imm $
 \end{center}
 
-The \texttt{CALL} instruction is decoded as the combination of three simpler instructions in order to simplify its hardware implementation, since the architecture does not provide a dedicated instruction for adding an immediate value.
+Note that due to the constraint of executing the \texttt{CALL} instruction in the Decode stage, we have simplified it to $ PC \leftarrow  imm $. Consequently, the caller must manually save the correct return address into register $R14$ (the Link Register) by executing the following instruction sequence before the \texttt{CALL}:
 
-\begin{itemize}
-  \item \texttt{SETI R6, 6} – Load the constant offset corresponding to \texttt{PC + 2}.
-  \item \texttt{SUM R14, PC, R6} – Store the return address in register \texttt{R14}.
-  \item \texttt{SETI PC, imm} – Update the program counter with the target address.
-\end{itemize}
+\begin{lstlisting}[style=asmstyle]
+SETI R6, 4
+SUM R14, PC, R6
+CALL label
+NOP
+\end{lstlisting}
 
-
-The immediate operand of the \texttt{CALL} instruction may be specified as a label, as the compiler is responsible for resolving the label and substituting it with the corresponding address. The instruction has the following binary representation.
-
-
+The immediate operand of the \texttt{CALL} instruction may be specified as a label. The compiler is responsible for resolving the label and substituting it with the corresponding absolute address. The instruction has the following binary representation:
 
 \begin{table}[H]
 \centering
@@ -1496,8 +1495,8 @@ The immediate operand of the \texttt{CALL} instruction may be specified as a lab
 \begin{tabular}{|c|c|c|c|}
 \hline
 \rowcolor{blue!20}
-\textbf{Funct2 [15:14]} & \textbf{Funct1 [13]} & \textbf{Imm [12:2]} & \textbf{Opcode [1:0]} \\ \hline
-1 1 & 1  & 11 bits & 1 1 \\ \hline
+\textbf{Funct2 [15:14]} & \textbf{Funct3 [13]} & \textbf{Imm [12:2]} & \textbf{Opcode [1:0]} \\ \hline
+1 1 & 1 & 11 bits & 1 1 \\ \hline
 \end{tabular}
 \caption{Binary encoding of the \texttt{CALL} instruction}
 \end{table}
@@ -1535,6 +1534,8 @@ AddNumbers:
 CallSum:
     SETI  R2, 65408    ; Load first operand (65408) into R2 (First Argument)
     SETI  R3, 134      ; Load second operand (134) into R3 (Second argument)
+    SETI R6, 4
+    SUM R14, PC, R6    ; Save the return adress
     CALL  AddNumbers   ; Call AddNumbers function (return address saved in R14)
     NOP                ; Branch delay slot after CALL
     RET                ; Return to caller using link register
@@ -1657,12 +1658,41 @@ combinational block that outputs the instruction corresponding to the address gi
 There are two pipeline registers in this design. The first one is between the IF and ID stages, and
 the second one is between the ID and EX stages. All the signals that are passed through these registers
 are stored in them, and then used in the next stage at the next clock cycle.
+The Decode stage contains a dedicated ``Decode'' block responsible for extracting the following control signals from the instruction: 
+\begin{itemize}
+    \item \texttt{RegRdIdx1}: Specifies the register index for the first source operand (Rs1).
+    \item \texttt{RegRdIdx2}: Specifies the register index for the second source operand (Rs2).
+    \item \texttt{RegWrIdx}: Specifies the destination register index for write-back operations (Rd).
+    \item \texttt{ALUOp}: Determines the arithmetic or logical operation to be performed by the ALU 
+    \item \texttt{RegWrSel}: Selects the source of data to be written to the register file ( ALU result, memory data, or immediate).
+    \item \texttt{RegWrEn}: Enables writing to the register file when asserted (active high).
+    \item \texttt{MemSel}: Controls memory access type (read, write).
+    \item \texttt{ALUSrc}: Selects the second ALU input source (0 = sign-extended immediate, 1 = register Rs2,).
+    \item \texttt{JumpSel}: Determines the type of control flow operation:
+\end{itemize}
 
-In the decode stage, there is a "Decode" block that takes care of decoding the RegRdIdx1, RegRdIdx2,
-RegWrIdx, ALUOp, RegWrSel, RegWrEn and Branch. The Register File block contains the 16 registers of
-the processor. It receives RegRdIdx1 and RegRdIdx2 based on which it provides the corresponding
-register values as outputs, into the pipeline register. The sign extension block is also a core components
-of this processor, since we use sign extended immediates in the instructions.
+To ensure that conditional branches (\texttt{BNZ}), unconditional branches (\texttt{GTO}), and call instructions (\texttt{CALL}) are resolved entirely within the Decode stage, we have implemented a specialized selection logic block. This block takes the \texttt{JumpSel} signal as its primary input, which can assume one of the following encoded values:
+\begin{itemize}
+    \item \texttt{Normal}: Indicates the normal sequential flow of the pipeline (no branch or call).
+    \item \texttt{CALL}: Indicates a \texttt{CALL} instruction.
+    \item \texttt{GTO}: Indicates a \texttt{GTO} (Go To) instruction.
+    \item \texttt{Branch}: Indicates a \texttt{BNZ} (Branch if Not Zero) instruction.
+\end{itemize}
+
+The actual value of \texttt{JumpSel} (\texttt{Normal}, \texttt{GTO}, \texttt{CALL}, or \texttt{Branch}) is determined by the decoder based on the instruction fields: \texttt{funct1}, \texttt{funct2}, \texttt{funct3}, and \texttt{opcode}.
+
+The selection logic block also receives the immediate value (\texttt{Imm}) and the data from the register specified by \texttt{RegRdIdx1} (Rs1). It outputs the selected address to the program counter multiplexer, which chooses between four possible inputs according to the following logic:
+\begin{itemize}
+    \item If \texttt{JumpSel = Normal}: Select the sequential address $PC_{Old}$.
+    \item If \texttt{JumpSel = CALL}: Select the target immediate address $Imm$.
+    \item If \texttt{JumpSel = GTO}: Select the target address from register Rs1.
+    \item If \texttt{JumpSel = Branch}: Select the computed branch target $PC + 2 \times Imm$.
+\end{itemize}
+
+Note that by resolving all branch and call instructions completely within the Decode stage, no further action is required in the Execution stage for these control-flow operations. The decoder is therefore responsible for correctly evaluating register values and immediate operands to place the processor in a safe and predictable state following a control transfer.
+The Register File block contains all 16 general-purpose processor registers. For clarity in the architectural diagram, the Program Counter (PC) register is shown separately from the main register file. The Register File receives \texttt{RegRdIdx1} and \texttt{RegRdIdx2} as inputs and provides the corresponding register values as outputs to the subsequent pipeline register.
+
+The sign-extension block is another fundamental component of the processor, as sign-extended immediates are used extensively across the instruction set.
 
 In the execution stage, there is the main unit, which is the ALU block. It receives two operands as
 input and performs the operation specified by ALUOp. The result is then sent to a multiplexer that
@@ -1680,6 +1710,108 @@ does not increment to fetch the next instruction.
 \begin{landscape}
 \includepdf[landscape=true]{img/processor.pdf}
 \end{landscape}
+
+\subsection{Instruction Execution Analysis: The \texttt{CALL} Instruction}
+To illustrate the execution of a \texttt{CALL} instruction, we analyze the following code example:
+
+\begin{lstlisting}[style=asmstyle]
+SETI R6, 4          ; Load immediate value 4 into register R6
+SUM R14, PC, R6     ; Calculate return address: PC + 4 -> R14 (Link Register)
+CALL MyFunction     ; Transfer control to the function label
+NOP                 ; Delay slot instruction (always executed)
+MES R7, R4, 2       ; Instruction executed after returning from function
+
+MyFunction:
+    DIF R1, R2, R3  ; Function entry point: difference operation
+    RET              ; Return to caller using address in R14
+    NOP             ; Delay slot after return
+\end{lstlisting}
+
+
+In the first cycle (figure:\ref{fig:cycle1}), the fetch stage retrieves \texttt{SETI R6, 6} from the instruction memory using the current program counter. The PC value points to adress $0$x$0000 0000$. At this moment, the DI and EX stages are idle (processing bubbles or previous instructions). The immediate value \texttt{6} is part of the fetched instruction word. No register reads occur yet, and the control signals remain at default values.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle1.pdf}
+    \caption{Cycle 1: Fetch stage retrieves the first instruction \texttt{SETI R6, 4}}
+    \label{fig:cycle1}
+\end{figure}
+
+In the next step (figure:\ref{fig:cycle2}),\texttt{SETI R6, 4} moves to the DI stage where it is decoded. The immediate value \texttt{4} is extracted and prepared for loading into register R6. Control signals are generated: \texttt{RegWrite} is asserted for R6, and \texttt{ALUSrc} selects the immediate operand path. Simultaneously, the FI stage fetches the next instruction: \texttt{SUM R14, PC, R6}. The PC increments by the instruction word size.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle2.pdf}
+    \caption{Cycle 2 - First decode and Second Fetch}
+    \label{fig:cycle2}
+\end{figure}
+
+After that (figure:\ref{fig:cycle3_before_stall}) ,\texttt{SETI R6, 4} enters the Execute (EX) stage, where the immediate value \texttt{4} is written to register R6. This situation creates a data hazard: the subsequent \texttt{SUM R14, PC, R6} instruction in the Decode (DI) stage requires the newly computed value of R6, but the register file still contains the old value.
+To resolve this hazard, the pipeline's stall logic intervenes. It prevents the program counter (PC) from incrementing and injects a \texttt{NOP} (no-operation) instruction directly into the FI/ID pipeline register. This stall effectively introduces a one-cycle bubble into the pipeline , allowing the \texttt{SETI} instruction to complete its execution before the \texttt{SUM} instruction reads R6 in the next cycle.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle3_before_stall.pdf}
+    \caption{Cycle 3 - Pipeline Filling and Data Hazard (Just before the stall)}
+    \label{fig:cycle3_before_stall}
+\end{figure}
+Following the resolution of the data hazard, the pipeline resumes normal operation in cycle 4 (figure:\ref{fig:cycle3_after_satll}). The \texttt{NOP} injected during the stall propagates to the DI stage, while \texttt{SETI R6, 4} completes execution in the EX stage. The \texttt{SUM R14, PC, R6} instruction, now correctly positioned in the DI stage, reads the updated value of R6 (now containing 4) from the register file. Simultaneously, the FI stage fetches the \texttt{CALL MyFunction} instruction from address \texttt{0x00000004}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle3_after_stall.pdf}
+    \caption{Cycle 4 - Pipeline Filling and Data Hazard (Just after the stall)}
+    \label{fig:cycle3_after_satll}
+\end{figure}
+
+Cycle 5 (figure:\ref{fig:cycle5}) marks the critical branch decision point. The \texttt{SUM R14, PC, R6} instruction moves to the EX stage, where the ALU calculates \texttt{PC + 4} and writes the result (return address \texttt{0x0000000C}) to register R14. Concurrently, the \texttt{CALL MyFunction} instruction enters the DI stage. Here, the decoder extracts the target address \texttt{MyFunction}, generates \texttt{JumpSel = CALL}, and prepares the immediate value for the PC update. The FI stage fetches the delay slot \texttt{NOP} from address \texttt{0x00000006}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle4.pdf}
+    \caption{Cycle 5: \texttt{SUM} calculates return address; \texttt{CALL} decoded with \texttt{JumpSel=CALL}}
+    \label{fig:cycle5}
+\end{figure}
+
+
+In cycle 6 (figure:\ref{fig:cycle6}), the control transfer occurs during the Decode stage. The \texttt{CALL MyFunction} instruction does not require processing in the Execute (EX) stage, as the decoder sets appropriate values for control signals to maintain the processor in a safe state. Specifically, the \texttt{JumpSel = CALL} signal directs the program counter multiplexer to load the immediate target address \texttt{MyFunction}. Concurrently, the delay slot \texttt{NOP} instruction enters the DI stage, and the FI stage fetches the first instruction of the function, \texttt{DIF R1, R2, R3}, from address \texttt{0x0000000A}.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle5.pdf}
+    \caption{Cycle 6: \texttt{CALL} triggers control transfer in Decode stage; \texttt{DIF} fetched from target address}
+    \label{fig:cycle6}
+\end{figure}
+
+In cycle 7 (figure:\ref{fig:cycle7}), the pipeline executes the delay slot while entering the called function. The \texttt{NOP} instruction, which occupies the delay slot following the \texttt{CALL}, moves to the Execute (EX) stage where it performs no operation. Concurrently, the \texttt{DIF R1, R2, R3} instruction, fetched from the function entry point in the previous cycle, is decoded in the DI stage. The decoder extracts register indices R1, R2, and R3, and generates appropriate control signals for the difference operation. The FI stage fetches the next instruction from the function body, \texttt{RET}, from address \texttt{0x0000000C}. This demonstrates the delay slot guarantee: the instruction immediately following the \texttt{CALL} (the \texttt{NOP}) is executed before the first instruction of the target function.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle6.pdf}
+    \caption{Cycle 7: Delay slot \texttt{NOP} executes; \texttt{DIF} decoded; \texttt{RET} fetched from function body}
+    \label{fig:cycle7}
+\end{figure}
+
+Cycle 8 (figure:\ref{fig:cycle8}) shows the pipeline fully executing the function body while completing the delay slot instruction sequence. The \texttt{DIF R1, R2, R3} instruction moves to the EX stage, where the ALU calculates the difference between registers R2 and R3, storing the result in R1. In the DI stage, the \texttt{RET} instruction is decoded, preparing for the return from the function. The FI stage fetches the next instruction, which is another \texttt{NOP} from address \texttt{0x0000000E}, located after the \texttt{RET} instruction. This second \texttt{NOP} represents the delay slot for the return instruction, maintaining architectural consistency.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle7.pdf}
+    \caption{Cycle 8: \texttt{DIF} executes; \texttt{RET} decoded; delay slot \texttt{NOP} fetched after return}
+    \label{fig:cycle8}
+\end{figure}
+
+In cycle 9 (figure:\ref{fig:cycle9}), the pipeline handles the function return through decode-stage resolution. Similar to the \texttt{CALL} instruction, the \texttt{RET} instruction does not require an execution phase. The decoder sets appropriate control signal values to maintain the processor in a safe state, with the \texttt{JumpSel} signal configured to redirect the program counter using the return address stored in register R14. Concurrently, the delay slot \texttt{NOP} following the \texttt{RET} instruction moves to the Execute (EX) stage, where it performs no operation. The DI stage processes the next instruction, and the FI stage fetches \texttt{MES R7, R4, 2} from address \texttt{0x00000008}—the return address stored in R14 during the initial call sequence.
+
+Following this cycle, the processor resumes normal sequential execution and proceeds to execute the \texttt{MES} instruction
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1.1\textwidth]{img/cycle8.pdf}
+    \caption{Cycle 9: \texttt{RET} triggers return in Decode stage using R14; \texttt{MES} fetched from return address}
+    \label{fig:cycle9}
+\end{figure}
+
 
 
 \subsection{Pipeline Hazards and Control}
