@@ -1720,6 +1720,20 @@ is supported. If a read and a write touch the same register in the same cycle, t
 conflict because the ports exist; if the reader needs the newly written value, that becomes a data hazard
  and we already handle it with a one‑cycle stall. Therefore, no extra stalls are needed for structural reasons.
 
+
+
+\section{Conclusions}
+
+This project focused on understanding the RISC-V instruction set architecture and its impact on program execution and processor design. By working through a low-level analysis of a RISC-V assembly program, it showed how the behavior of a high-level program can be explained by looking at instruction decoding, control flow, and pipeline execution.
+
+The study of branch instructions and the branch delay slot concept highlighted some of the main design compromises found in early pipelined processors. While delay slots can reduce pipeline stalls and simplify the hardware, they also make software more complex and restrict architectural evolution. This helps explain why most modern processors rely on branch prediction rather than delay slots.
+
+By reconstructing the original C code from the assembly and comparing it with compiler-generated code at different optimization levels, the project showed how important compiler optimizations are for performance. Higher optimization levels led to shorter and more efficient code, with fewer memory accesses and a clearer control flow, which also resulted in better pipeline behavior.
+
+Finally, the design and evaluation of a custom 16-bit processor ISA helped tie together the main architectural ideas covered in the project. Defining the instruction set, register usage, control-flow instructions, and hazard handling provided a practical view of processor design choices. Overall, this project helped connect software and hardware concepts, showing how both architectural decisions and compiler behavior influence program correctness and efficiency.
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % SECTION BIBLIOGRAPHY
