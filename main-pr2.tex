@@ -1,0 +1,153 @@
+\documentclass{article}
+\usepackage{graphicx}                            % Required for inserting images
+\usepackage[paper=a4paper, top=1.5cm, bottom=1.5cm, left=2.0cm, right=2.0cm, heightrounded]{geometry}
+\usepackage{hyperref}                            % Clickable links (disabled for minimal TeX install)
+\usepackage{array}
+\usepackage{multirow}
+\usepackage{longtable}
+\usepackage{xcolor}
+\usepackage{tabularx}
+\usepackage{colortbl}
+\usepackage{adjustbox}
+\usepackage{rotating}
+\usepackage{float}
+\usepackage[justification=centering]{caption}
+\usepackage{listings}
+\usepackage{listings}
+
+\usepackage{framed}
+\usepackage[nobreak=true]{mdframed}
+\usepackage{tikz}
+\usepackage{longtable}
+\usepackage{pdflscape}
+\usepackage{graphicx}
+\usepackage{pdfpages}
+\usetikzlibrary{positioning, arrows.meta, shapes, calc}
+
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{5pt}
+
+\lstdefinelanguage{MyASM}{
+  morekeywords={
+    SETI, CALL, NOP, RET, SUM, DIF, GTO, SHR, MES, MEL, BNZ
+  },
+  sensitive=true,
+  morecomment=[l]{;},
+  morestring=[b]"
+}
+
+\lstdefinestyle{asmstyle}{
+  language=MyASM,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  frame=single,
+  rulecolor=\color{black!40},
+  backgroundcolor=\color{gray!5},
+  tabsize=2,
+  showstringspaces=false,
+  breaklines=true,
+  captionpos=b
+}
+\graphicspath{ {./img/} }
+
+
+\lstset{
+  basicstyle=\ttfamily\small,      % letra de código
+  frame=single,                    % marco alrededor
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  numbers=left,                    % números de línea
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  backgroundcolor=\color{gray!10}, % fondo suave
+  tabsize=2,
+  captionpos=b
+}
+
+% Pipeline diagram colors and macros
+\newcommand{\IF}{\cellcolor{blue!15}IF}
+\newcommand{\ID}{\cellcolor{green!20}ID}
+\newcommand{\EX}{\cellcolor{orange!25}EX}
+\newcommand{\MEM}{\cellcolor{purple!20}MEM}
+\newcommand{\WB}{\cellcolor{gray!20}WB}
+\newcommand{\STALL}{\cellcolor{yellow!30}stall}
+\newcommand{\FLUSH}{\cellcolor{red!25}flush}
+
+% Text-only stage macros for inline use
+\newcommand{\IFtxt}{IF}
+\newcommand{\IDtxt}{ID}
+\newcommand{\EXtxt}{EX}
+\newcommand{\MEMtxt}{MEM}
+\newcommand{\WBtxt}{WB}
+\newcommand{\STALLtxt}{stall}
+\newcommand{\FLUSHtxt}{flush}
+
+
+
+
+
+\begin{document}
+
+
+\begin{titlepage}
+    \begin{center}
+        {\includegraphics[width=0.4\textwidth]{telecomparis.png} \par}
+        \vspace{1cm}
+        {\bfseries\LARGE Télécom Paris \par}
+        \vspace{1cm}
+        \vspace{2cm}
+        {\scshape\Huge Project \par}
+        \vspace{1cm}
+            {\itshape\Large Execution Platforms \par}
+        \vfill
+        \vspace{1cm}
+            {\itshape\Large Professor: BRANDNER Florian \par}
+        \vspace{2cm}
+
+        {\Large Members: \par}
+        {\Large BARAU  Elena\par}
+        {\Large HAMDANE Brini\par}
+        {\Large MARCULESCU Tudor\par}
+        {\Large WILCHES Juan\par}
+
+
+        \vfill
+
+        \vfill
+        {\Large January 2026 \par}
+    \end{center}
+\end{titlepage}
+\clearpage
+
+
+\tableofcontents
+\clearpage
+\listoftables
+\listoffigures
+
+
+\clearpage
+
+\newpage
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% SECTION BIBLIOGRAPHY
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\newpage % keep bibliography on a new page
+\bibliographystyle{plain}   % choose a style
+\bibliography{ref-pr2}      % name of .bib file (no .bib extension)
+
+
+\end{document}
