@@ -10,11 +10,15 @@ of a processor.
 - [Who contributed](#who-contributed)
 
 # Timeline
-- [🟢] Finish 1st task: December 12
-- [🟢] Finish 2nd task: December 19
-- [🟢] Finish 3rd task: December 26
-- [🟢/🔴] Finish 4th task: December 30
-- [🔴] Deadline: January 12, 2026 (23:55)
+- [🟢] Finish PR1 1st task: December 12
+- [🟢] Finish PR1 2nd task: December 19
+- [🟢] Finish PR1 3rd task: December 26
+- [🟢] Finish PR1 4th task: December 30
+- [🔴] Finish PR2 1st task: January  16
+- [🔴] Finish PR2 2nd task: January  23
+- [🔴] Finish PR2 3rd task: January  30
+- [🔴] Finish PR2 4th task: February 6
+- [🔴] Finish PR2 5th task: Deadline 15th february 2026 23:55
 
 # How to setup for the project
 1. Install ```LaTeX Workshop``` extension in VSCode

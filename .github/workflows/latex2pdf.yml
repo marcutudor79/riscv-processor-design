@@ -1,4 +1,4 @@
-name: LateX CV to PDF
+name: LateX PR1, PR2 to PDF
 
 # run on any push, any branch
 on: [push]
@@ -10,18 +10,24 @@ jobs:
     steps:
       - name: Set up Git repository
         uses: actions/checkout@v4
-      - name: Compile LaTeX
+      - name: Compile LaTeX PR1
         uses: xu-cheng/latex-action@v3
         with:
-          root_file: main.tex
+          root_file: main-pr1.tex
+          latexmk_use_lualatex: true
+      - name: Compile LaTeX PR2
+        uses: xu-cheng/latex-action@v3
+        with:
+          root_file: main-pr2.tex
           latexmk_use_lualatex: true
       - name: Arrange output
         run: |
           mkdir -p output
-          mv main.pdf output/main.pdf
-      - name: Upload CV in PDF to the workflow tab
-        id: upload-workflow-tab
+          mv main-pr1.pdf output/main-pr1.pdf
+          mv main-pr2.pdf output/main-pr2.pdf
+      - name: Upload PR1,2 in PDF to the workflow tab
+        id: upload-workflow-tab-1
         uses: actions/upload-artifact@v4
         with:
-          name: main
-          path: output/main.pdf
+          name: project1-project2
+          path: output/main-*.pdf
