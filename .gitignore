@@ -5,6 +5,9 @@ build\
 *.fdb*
 *.synctex.gz
 *.aux
+*.lot
+*.lof
+*.toc
 main.out
 *.bbl
 *.blg
