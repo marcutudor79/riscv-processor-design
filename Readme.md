@@ -32,10 +32,10 @@ of a processor.
 ```
 ├── .github/workflows/  // github action to compile main LaTeX file
 │                       // find the .pdf in the "Actions" tab
-├── docs/               // folder containing misc documents and pdfs
+├── project1/           // folder containing project1 tex and misc files
 │
-├── img/                // folder containing images used in the report
-├── main.tex            // main LaTeX file
+├── project2/           // folder containing project2 tex and misc files
+|
 └── Readme.md
 ```
 
