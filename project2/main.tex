@@ -117,6 +117,33 @@
 
 \newpage
 
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+% SECTION 2
+
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+
+\section{RISC-V Tool Chain}
+
+What is the difference between make -B and make clean all.
+
+\begin{itemize}
+    \item make clean all: This command runs first the 'clean' target (whatever it does), then it runs
+    the 'all' target (whatever it does). Typically, the 'clean' target is used to remove all compiled
+    files and intermediate files generated during the build process, effectively cleaning the project
+    directory. After cleaning, the 'all' target is executed to build the project from scratch.
+    \item make -B: This command forces the build process to recompile all files, regardless of whether
+    they have changed or not. It does not remove any existing files but simply rebuilds everything.
+\end{itemize}
+
+Explain what the compiler options -nostdlib and -nostartfiles do.
+
+-nostdlib is used to prevent the linker from linking against the standard libraries.
+
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 % SECTION BIBLIOGRAPHY
