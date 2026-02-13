@@ -92,12 +92,141 @@
 
 
 \clearpage
+\section {Setup}
+
+This section is dedicated only to the setup of the project, which can be done by following the instructions
+in the PR2-SE201-21.pdf document.
+
+\section{RISC-V Tool Chain}
+\subsection{RISC-V Tools}
+\begin{itemize}
+    \item Make -B to force recompilation of the ELF binary from the C source code. This ensures that any changes
+    to the source code are reflected in the generated binary, allowing for accurate simulation and analysis in subsequent sections.
+    Make clean all to remove the generated ELF binary and object files, ensuring a clean state for future builds. This uses
+    the commands clean and all defined in the Makefile, without focusing necessarly on rebuilding the binary
+
+    \item The compiler options -nostdlib and -nostartfiles are used to prevent the inclusion of standard libraries and
+    startup files in the compilation process. This is crucial for embedded systems programming, where the developer often needs
+    to have full control over the memory layout and initialization process.
+
+    \item The command \textbf{riscv64-linux-gnu-objdump -d bin/insertion-sort.elf} indeed shows the assembly code of the generated ELF
+    binary. The less command makes the output more readable by allowing you to scroll through it page by page. This is
+    particularly useful for large binaries, as it prevents the terminal from being overwhelmed with too much information at once.
+
+    \item The command \textbf{riscv64-linux-gnu-objdump -S insertion-sort.elf} provides a disassembly of the ELF binary with interleaved
+    source code. This allows you to see the original C code alongside the corresponding assembly instructions, making it easier to
+    understand how the high-level code translates into low-level operations. This is especially helpful for debugging and performance
+    analysis, as it provides insights into how specific lines of C code are executed at the assembly level.
+
+    In order to serach for the for loop in the main function, it is usefull to use the command
+    \textbf{riscv64-linux-gnu-objdump -S insertion-sort.elf | less} to view the disassembled code and search for the loop structure.
+    Then the \textbf{/main} command can be used within less to navigate directly to the main function.
+    The code for the first loop is situated between 0x100f8 -- 0x1011c. Having the following structure:
+    \begin{lstlisting}
+        for(i = 0; i < SIZE; i++)
+   100f8:       000117b7                lui     a5,0x11
+   100fc:       1a478793                addi    a5,a5,420 # 111a4 <input>
+   10100:       00410413                addi    s0,sp,4
+   10104:       18c78613                addi    a2,a5,396
+{
+   10108:       00040713                mv      a4,s0
+        {
+                buf[i] = input[i];
+   1010c:       0007a683                lw      a3,0(a5)
+   10110:       00d72023                sw      a3,0(a4)
+        for(i = 0; i < SIZE; i++)
+   10114:       00478793                addi    a5,a5,4
+   10118:       00470713                addi    a4,a4,4
+   1011c:       fec798e3                bne     a5,a2,1010c <main+0x2c>
+        }
+}
+    \end{lstlisting}
+
+    The instructions \texttt{lw a3,0(a5)} and \texttt{sw a3,0(a4)} correspond to the load and store operations
+    for copying data from the input array to the buffer. The loop structure is evident from the \texttt{addi}
+    instructions that increment the pointers (a5 and a4) and the \texttt{bne} instruction that checks the
+    loop condition.
+
+    \item The command to see the symbols defined in the ELF binary using the command
+    \textbf{riscv64-linux-gnu-objdump -t -j.data -j.text insertion-sort.elf} allows you to view the
+    symbol table of the ELF binary, specifically focusing on the .data and .text sections.
+    The symbol "input" is located in the \textbf{000111a4 g     O .data  00000190 input} in the
+    section data at address 0x111a4.
+
+    \item PIC (Position Independent Code) is machine code that can run correctly no matter where it's loded
+    in memory. This is particularly important for shared libraries that can be mapped into different
+    processes at different addresses. This is important for security reasons, because it allows
+    for techniques like Address Space Layout Randomization (ASLR), which makes it more difficult for
+    attackers to predict the location of specific code or data in memory. \textbf{aiupc} instruction
+    is used to get the current program counter (PC) value, which is essetial for PIC to calculate
+    addresses relative to the current location in memory.
+
+    \item Is the compiled binary code position-independent (PIC)? No it is not position-indepedent,
+    since the code is compiled without the -fPIC flag. If the dissasemble command \textbf{riscv64-unknown-elf-objdump -drwC insertion-sort.elf | grep -nE auipc}
+    then no \texttt{auipc} instructions are present. If the -fPIC flag is used to compile the ELF,
+    then there are auipc instructions present in the dissambly code indicating that the code is
+    position-independent.
+\end{itemize}
+
+\subsection{Ripes}
+\begin{itemize}
+    \item If you open Ripes simulator and load the ELF binary, you can see the memory content of the
+    .data and .text sections. The .data section contains the initialized data, which in this case includes
+    the "input" array. As it can be seen in the picture below, the value 60 is stored at 0x111a4 and
+    so on.
+
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.4\textwidth]{img/ripes-memory-data.png}
+        \caption{Data section in Ripes simulator showing the "input" array values}
+        \label{fig:ripes-memory-data}
+    \end{figure}
+
+    \item The store instruction which is located at 0x10110 in the .text is the store instruction specific
+    to the first loop of the main function. More specifically, it is the instruction \textbf{sw x13 0 x14}.
+    The address of the store buffer is 0x7ffffe34. As per the photo below, the value 60 is stored at
+    this address, which corresponds to the first element of the input array being copied to the buffer.
+
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.4\textwidth]{img/ripes-memory-stack.png}
+        \caption{Stack section in Ripes simulator showing the "buf" array values}
+        \label{fig:ripes-memory-stack}
+    \end{figure}
+
+    \item The program has the following statistics:
+
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.2\textwidth]{img/ripes-statistics.png}
+        \caption{Program statistics in Ripes after completion}
+        \label{fig:ripes-statistics}
+    \end{figure}
+
+    \item When switching to the single cycle processor, the program has the
+    following statistics:
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.4\textwidth]{img/single-cycle-ripes-statistics.png}
+        \caption{Program statistics in Ripes after completion on single cycle processor}
+        \label{fig:ripes-statistics-single-cycle}
+    \end{figure}
+
+    By comparison with the simple 5 stage processor, the latter obtains a better CPI since
+    it executes one instruction per cycle, while the 5 stage processor has a CPI of 1.38 due to pipeline stalls and flushes.
+    The retired instructions are the same in both cases, which is expected since the program logic does not change. The total
+    cycles are significantly higher in the single in the 5 stage processor due to the overhead of pipelining.
+\end{itemize}
 
 \section{Simple Pipelining}
+
+
+
+
 \section{Branches and Multiple-Issue}
 
-This section examines the performance of two pipelined processor 
-configurations—a 5-stage single-issue and a 6-stage dual-issue 
+This section examines the performance of two pipelined processor
+configurations—a 5-stage single-issue and a 6-stage dual-issue
 processor—by simulating the execution of an insertion sort ELF binary.
 The analysis focuses on pipeline stalls, branch handling, data hazards,
 and overall CPI efficiency. Through systematic observation
@@ -124,8 +253,8 @@ The pipeline consists of the following stages:
     \item \textbf{Write Back (WB):} Write results back to the register file.
 \end{enumerate}
 
-This design aims to achieve a throughput of one instruction per cycle (CPI = 1.0). However, 
-hazards disrupt this flow, causing stalls and flushes that degrade performance, as observed 
+This design aims to achieve a throughput of one instruction per cycle (CPI = 1.0). However,
+hazards disrupt this flow, causing stalls and flushes that degrade performance, as observed
 in the following analysis.
 \subsubsection{Incomplete Instructions in the Pipeline}
 
@@ -245,14 +374,14 @@ Based on the observed pipeline behavior of the first loop in \texttt{< main >} (
 The consistent pattern of pipeline flushing observed across all branch instructions indicates the absence of a dynamic branch predictor in this processor design. This conclusion is supported by several key observations:
 \begin{itemize}
     \item \textbf{Consistent Flushing Pattern}: Every taken branch exhibits identical flushing behavior, regardless of execution history. This suggests a static approach rather than adaptive learning.
-    
+
     \item \textbf{No Learning Observed}: In a typical dynamic branch predictor (such as a two-bit saturating counter or branch history table), we would expect:
     \begin{enumerate}
         \item \textbf{Initial iterations}: Flushes would occur as the predictor learns branch behavior
         \item \textbf{Subsequent iterations}: After 2 executions, the predictor would accurately predict the branch direction, eliminating flushes
     \end{enumerate}
     The insertion sort algorithm contains loop branches that are typically taken many times consecutively. A competent dynamic predictor would quickly learn this pattern and avoid flushing after the initial learning phase.
-    
+
     \item \textbf{Statistical Evidence}: Analysis of the pipeline trace reveals that branches exhibit the same 2-cycle penalty (flushing 2 instructions) throughout execution, with no improvement over time. This static penalty pattern is characteristic of processors without branch prediction or with always-not-taken static prediction.
 \end{itemize}
 
@@ -266,10 +395,10 @@ To illustrate what we would expect with a dynamic branch predictor, consider the
 \begin{tabular}{|c|c|c|c|c|}
 \hline
 \rowcolor{blue!20}
-\textbf{Branch Iteration} & 
-\textbf{Predicted Outcome} & 
-\textbf{Actual Outcome} & 
-\textbf{Pipeline Flush} & 
+\textbf{Branch Iteration} &
+\textbf{Predicted Outcome} &
+\textbf{Actual Outcome} &
+\textbf{Pipeline Flush} &
 \textbf{Predictor State Update} \\
 \hline
 \rowcolor{red!30}
@@ -537,7 +666,7 @@ The lecture provides a theoretical analysis of processor performance based on a 
     \item A base CPI of 1.0 for arithmetic and other instructions .
 \end{itemize}
 
-The observed CPI for the insertion sort program (\textbf{1.38}) is slightly better (lower) than the lecture's theoretical average (\textbf{1.47}). 
+The observed CPI for the insertion sort program (\textbf{1.38}) is slightly better (lower) than the lecture's theoretical average (\textbf{1.47}).
 This discrepancy suggests that the specific instruction mix of the  insertion sort  is more efficient than the generic benchmark assumed in the lecture. Specifically, the insertion sort implementation likely contains a higher proportion of "safe" arithmetic/logic instructions relative to expensive control flow or load-use hazards, or the specific arrangement of instructions allows for fewer data stalls than the 11\% assumed in the general model.
 
 \subsection{6-stage dual issue processor}
@@ -617,44 +746,44 @@ Figure~\ref{fig:dual_issue_hazards} illustrates the detailed timing behavior of 
 \foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB} \node[stage, fill=orange!20] at (1.4*\c, 0) {\s};
 
 % lw x13 0 x15
-\foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB, 8/IF, 9/ID, 10/II, 11/EX, 12/MEM, 13/WB, 16/IF, 17/ID, 18/II, 19/EX, 20/MEM, 21/WB , 24/IF ,25/ID} 
+\foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB, 8/IF, 9/ID, 10/II, 11/EX, 12/MEM, 13/WB, 16/IF, 17/ID, 18/II, 19/EX, 20/MEM, 21/WB , 24/IF ,25/ID}
     \node[stage, fill=blue!20] at (1.4*\c, -1*1.2) {\s};
 
 % sw x13 0 x14
-\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/{IF/WB}, 9/ID, 10/-, 11/II, 12/-, 13/EX, 14/MEM, 15/WB, 16/IF, 17/ID, 18/-, 19/II, 20/-, 21/EX,22/MEM , 23/WB ,23/WB ,24/IF ,25/ID} 
+\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/{IF/WB}, 9/ID, 10/-, 11/II, 12/-, 13/EX, 14/MEM, 15/WB, 16/IF, 17/ID, 18/-, 19/II, 20/-, 21/EX,22/MEM , 23/WB ,23/WB ,24/IF ,25/ID}
     \node[stage, fill=green!20] at (1.4*\c, -2*1.2) {\s};
 
 % addi x15 x15 4
-\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/WB, 9/IF, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF} 
+\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/WB, 9/IF, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF}
     \node[stage, fill=cyan!20] at (1.4*\c, -3*1.2) {\s};
 
 % addi x14 x14 4
-\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/{IF/WB}, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF} 
+\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/{IF/WB}, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF}
     \node[stage, fill=yellow!20] at (1.4*\c, -4*1.2) {\s};
 
 % bne x15 x12 -16
-\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/WB, 11/IF, 12/-, 13/ID, 14/II, 15/EX, 16/MEM, 17/WB, 19/IF, 20/-, 21/ID, 22/II, 23/EX, 24/MEM, 25/WB} 
+\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/WB, 11/IF, 12/-, 13/ID, 14/II, 15/EX, 16/MEM, 17/WB, 19/IF, 20/-, 21/ID, 22/II, 23/EX, 24/MEM, 25/WB}
     \node[stage, fill=red!20] at (1.4*\c, -5*1.2) {\s};
 
 % --- Instructions Flushed (Grisées) ---
 % addi x9
-\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 11/IF, 12/-, 13/ID, 14/-, 15/II, 19/IF, 20/-, 21/ID, 22/-, 23/II} 
+\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 11/IF, 12/-, 13/ID, 14/-, 15/II, 19/IF, 20/-, 21/ID, 22/-, 23/II}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -6*1.2) {\s};
 
 % addi x19
-\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID} 
+\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -7*1.2) {\s};
 
 % addi x18
-\foreach \c/\s in {6/IF, 7/ID, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID} 
+\foreach \c/\s in {6/IF, 7/ID, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID}
     \node[stage,fill=gray!30 ,opacity=0.6] at (1.4*\c, -8*1.2) {\s};
 
 % sub x11
-\foreach \c/\s in {6/IF, 7/ID, 15/IF, 23/IF} 
+\foreach \c/\s in {6/IF, 7/ID, 15/IF, 23/IF}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -9*1.2) {\s};
 
 % addi x10
-\foreach \c/\s in {7/IF, 15/IF, 23/IF} 
+\foreach \c/\s in {7/IF, 15/IF, 23/IF}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -10*1.2) {\s};
 
 % jal x1
@@ -737,7 +866,7 @@ The theoretical optimal CPI of 0.5 assumes that two independent instructions are
 
 In practice, these conditions are not satisfied. The workload exposes limited parallelism, branch behavior introduces control penalties, and structural constraints restrict simultaneous execution of certain instruction classes. Consequently, the observed CPI of 1.26 reflects a realistic balance between architectural capability and workload characteristics.
 
-This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it. 
+This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it.
 
 \subsubsection{Comparison with 5-Stage Processor}
 Table~\ref{tab:processor_comparison} presents a comparison between the classical 5-stage pipeline and the 6-stage dual-issue architecture. Although the dual-issue processor offers a theoretical CPI of 0.5 compared to 1.0 for the single-issue design, this ideal 2× speedup is not achieved in practice.
