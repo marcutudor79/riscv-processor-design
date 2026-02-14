@@ -29,6 +29,10 @@
 \setlength{\parindent}{0pt}
 \setlength{\parskip}{5pt}
 
+% Number and include headings down to subsubsection in the ToC
+\setcounter{secnumdepth}{3}
+\setcounter{tocdepth}{3}
+
 \lstdefinestyle{mystyle}{
     backgroundcolor=\color{cyan!20},
     basicstyle=\ttfamily\color{black}\footnotesize,
@@ -94,6 +98,122 @@
 \clearpage
 
 \section{Simple Pipelining}
+\subsection{Setup and initial view}
+Using the Ripes simulator \cite{ripes_repo}, we first load the insertion\textendash sort ELF built from the source file \texttt{insertion-sort.c} and then select the 5\textendash stage scalar RISC\textendash V CPU via the \emph{CPU} button. After selecting this configuration, the \emph{Processor} tab presents the canonical IF\textendash ID\textendash EX\textendash MEM\textendash WB datapath with explicit pipeline registers (\texttt{IF/ID}, \texttt{ID/EX}, \texttt{EX/MEM}, \texttt{MEM/WB}). The view shows the PC and instruction memory feeding \emph{Decode} and the \emph{Registers} file; operands flow through the immediate generator into the \emph{ALU}, with a \emph{Branch} unit resolving control flow, while the \emph{Data memory} block handles loads/stores before results are written back via the MEM/WB mux to the register file. Forwarding candidates are visually indicated by the multiplexers bridging values from later stages back to EX operands and each pipeline register exposes \emph{enable}/\emph{clear} controls that highlight stalls and flushes when stepping the program. This is the exact structural view shown in Figure~\ref{fig:ripes_5stage} and serves as the baseline for the following questions, where we run approximately 100 cycles of the insertion\textendash sort program and observe pipeline activity.
+
+\begin{figure}[H]
+        \centering
+        \IfFileExists{img/ripes_5stage.png}{%
+            \includegraphics[width=\textwidth]{img/ripes_5stage.png}%
+        }{%
+            \fbox{\parbox{0.9\textwidth}{Figure placeholder: 5\textendash Stage RISC\textendash V Processor (Ripes). Place the image at \texttt{img/ripes\_5stage.png}.}}%
+        }
+        \caption{5\textendash Stage RISC\textendash V Processor view in Ripes after selecting the CPU and loading the insertion\textendash sort ELF.}
+        \label{fig:ripes_5stage}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/ripes_before.png}{%
+        \includegraphics[width=\textwidth]{img/ripes_before.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Ripes state before stepping (Cycles = 0). Save your screenshot as \texttt{img/ripes\_before.png}.}}%
+    }
+    \caption{Ripes 5\textendash stage CPU view immediately after loading the insertion\textendash sort ELF (before stepping the simulation).}
+    \label{fig:ripes_before}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/ripes_after_101.png}{%
+        \includegraphics[width=\textwidth]{img/ripes_after_101.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Ripes state after about 101 cycles. Save your screenshot as \texttt{img/ripes\_after\_101.png}.}}%
+    }
+    \caption{Ripes 5\textendash stage CPU view after stepping to about 101 cycles, showing stalls/forwarding indicators and the execution summary (CPI/IPC).}
+    \label{fig:ripes_after_101}
+\end{figure}
+
+\subsection{Forwarding support: evidence from the pipeline diagram}
+After running the insertion\textendash sort program for 101 cycles on the 5\textendash stage CPU (Figure~\ref{fig:ripes_after_101}), the pipeline diagram shows that the processor executes many dependent instruction pairs without inserting bubbles (\texttt{-}). This implies that the consumer does \emph{not} wait until the producer reaches \textbf{WB}. In a classic 5\textendash stage pipeline, register operands are read in \textbf{ID} and without forwarding the consumer would have to stall until the producer writes the result back in \textbf{WB}. Forwarding adds hardware paths from later pipeline stages (typically \textbf{EX/MEM} or \textbf{MEM/WB}) back to the \textbf{EX} stage input multiplexers, so the consumer can receive the value early. The key evidence in our trace is that there exists at least one dependence where the consumer reaches \textbf{EX} \emph{before} the producer reaches \textbf{WB}, yet no stall appears; this can only be explained if the CPU forwards the value internally.
+
+\subsubsection{Forwarding example (ALU to branch)}
+A clear example occurs in the loop control sequence \texttt{addi x15, x15, 4} followed by \texttt{bne x15, x12, -16}. The \texttt{addi} updates the loop\textendash carried register \texttt{x15} and the branch immediately uses \texttt{x15} to decide whether to repeat the loop. In the pipeline diagram extract (Figure~\ref{fig:forwarding_alu_branch}), the \texttt{addi} reaches \textbf{EX} at cycle 45 and writes its result only at \textbf{WB} at cycle 47, while the dependent \texttt{bne} reaches \textbf{EX} at cycle 46 (one cycle \emph{before} write\textendash back). Since the branch proceeds without a bubble between the two instructions, the branch must be receiving the updated \texttt{x15} through a forwarding path (most plausibly from \textbf{EX/MEM} of the producer into \textbf{EX} of the consumer). This timing relationship is direct pipeline\textendash level proof that forwarding is implemented.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/crop_addi_bne_cycles42_49.png}{%
+        \includegraphics[width=0.92\textwidth]{img/crop_addi_bne_cycles42_49.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Forwarding proof. Save your crop as \texttt{img/crop\_addi\_bne\_cycles42\_49.png}.}}%
+    }
+    \caption{Forwarding proof (ALU result used before \textbf{WB}). \texttt{addi x15, x15, 4} reaches \textbf{EX} at cycle 45 and writes back at \textbf{WB} at cycle 47, while the dependent \texttt{bne x15, x12, -16} reaches \textbf{EX} at cycle 46. The branch therefore uses the updated \texttt{x15} one cycle before it is written back, implying a forwarding path into \textbf{EX}.}
+    \label{fig:forwarding_alu_branch}
+\end{figure}
+
+\subsubsection{Load\textendash use hazard (stall)}
+The trace also shows that not all RAW hazards are eliminated. The classic special case is when an instruction loads a value from memory and the very next instruction immediately needs it. In the loop body, \texttt{lw x13, 0(x15)} loads an array element into \texttt{x13} and the next instruction \texttt{sw x13, 0(x14)} stores that same value to another address. In the pipeline diagram, \texttt{lw x13, 0(x15)} proceeds normally with \textbf{MEM} at cycle 43 and \textbf{WB} at cycle 44. The following store shows an explicit one\textendash cycle bubble (\texttt{-}) at cycle 43, i.e., it goes \textbf{IF} 41 $\rightarrow$ \textbf{ID} 42 $\rightarrow$ \texttt{-} 43 $\rightarrow$ \textbf{EX} 44 $\rightarrow$ \textbf{MEM} 45 $\rightarrow$ \textbf{WB} 46. This stall occurs because the loaded data is only available after the load's memory access (end of \textbf{MEM}), so the pipeline must delay the consumer so that the correct data can be forwarded in time. Therefore, the processor supports forwarding, but still pays a one\textendash cycle penalty for back\textendash to\textendash back load\textendash use patterns.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/crop_lw_sw_cycles40_48.png}{%
+        \includegraphics[width=0.92\textwidth]{img/crop_lw_sw_cycles40_48.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Load\textendash use stall. Save your crop as \texttt{img/crop\_lw\_sw\_cycles40\_48.png}.}}%
+    }
+    \caption{Load\textendash use stall. \texttt{lw x13, 0(x15)} runs IF40\textendash ID41\textendash EX42\textendash MEM43\textendash WB44, while the dependent \texttt{sw x13, 0(x14)} inserts a one\textendash cycle bubble (\texttt{-}) at cycle 43 before continuing to EX44\textendash MEM45\textendash WB46.}
+    \label{fig:load_use_stall}
+\end{figure}
+
+\subsubsection{Control hazard (branch squashing)}
+Finally, the loop branch \texttt{bne x15, x12, -16} introduces a control hazard. In a simple 5\textendash stage design, the branch decision is typically resolved in \textbf{EX}, so some instructions fetched in the meantime may belong to the wrong path. In our pipeline diagram (in Figure~\ref{fig:control_hazard_squash}), immediately after the branch enters the pipeline (\textbf{IF} at cycle 45), subsequent instructions such as \texttt{addi x9, x0, 0} appear only in early stages (\textbf{IF} at cycle 46, \textbf{ID} at cycle 47) and then disappear (they do not progress to \textbf{EX/MEM/WB}) within the shown window. This is consistent with the instruction being fetched/decoded but later squashed when the taken branch redirects the PC. This behavior matches a basic pipeline with no dynamic branch prediction and branch resolution late enough to waste at least some fetch/decode work per taken loop branch.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/crop_branch_squash_cycles45_52.png}{%
+        \includegraphics[width=0.92\textwidth]{img/crop_branch_squash_cycles45_52.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Control hazard squashing. Save your crop as \texttt{img/crop\_branch\_squash\_cycles45\_52.png}.}}%
+    }
+    \caption{Control hazard and squashing after a taken branch. After \texttt{bne x15, x12, -16} enters the pipeline, the following fall\textendash through instruction (e.g., \texttt{addi x9, x0, 0}) is observed only in \textbf{IF}/\textbf{ID} and does not advance to \textbf{EX/MEM/WB} in the shown cycle window, which is consistent with being squashed after the branch outcome redirects the PC.}
+    \label{fig:control_hazard_squash}
+\end{figure}
+
+\subsubsection{Capabilities summary}
+The 5\textendash stage CPU executes one instruction per cycle in the ideal case, but uses hazard logic to maintain correctness. The pipeline supports data forwarding into \textbf{EX}, allowing dependent ALU/branch/address computations to proceed without waiting for \textbf{WB} (demonstrated by \texttt{addi x15, x15, 4} feeding \texttt{bne x15, x12, -16} one cycle later in Figure~\ref{fig:forwarding_alu_branch}). However, it still incurs stalls for load\textendash use hazards where the consumer needs a value that becomes available only after \textbf{MEM} (\texttt{lw} $\rightarrow$ immediate use), as shown in Figure~\ref{fig:load_use_stall}. Control hazards from branches also create wasted work as wrong\textendash path instructions can be fetched and decoded before the branch resolves and are then squashed (Figure~\ref{fig:control_hazard_squash}).
+
+\subsection{How the simulator detects completion}
+The simulator determines program completion by observing a terminating environment call. In the executed instruction stream, the program eventually reaches the \texttt{\_start} termination sequence where the register \texttt{a7} (\texttt{x17}) is set to a specific value and then an \texttt{ecall} instruction is executed. In Ripes \cite{ripes_repo}, \texttt{ecall} implements a set of simulator\textendash defined ``environment calls''; when \texttt{a7 = 10}, the call corresponds to \emph{exit}, so Ripes halts simulation and reports program completion.
+
+In the RISC\textendash V ISA, \texttt{ecall} (environment call) is an instruction used to request a service from the execution environment, typically the operating system or a runtime monitor, by raising an environment\textendash call exception to a higher\textendash privileged handler \cite{riscv_unpriv_isa}. Which service is requested (e.g., exit, print, read) is not fixed by the ISA itself; it is defined by the ABI/runtime convention, typically using designated registers to pass a syscall number and arguments \cite{borza_ecalls_syscalls}. In Ripes, this mechanism is reused to provide basic I/O and termination services inside the simulator, with the call selector stored in \texttt{a7}.
+
+\subsubsection{Pipeline\textendash level view}
+From the pipeline diagram, program completion is visible because the terminating sequence \texttt{addi x17, x0, 10} followed by \texttt{ecall} appears in the executed instruction stream. In the early trace window (Figure~\ref{fig:ecall_early}), the simulator has fetched the instructions that prepare the exit call (setting \texttt{a7/x17} to 10) and then fetches the \texttt{ecall}. In the final trace window at the end of execution (Figure~\ref{fig:ecall_end}), \texttt{ecall} progresses through the pipeline and the simulation stops afterwards because the program has explicitly requested termination.
+
+One detail worth noting is that the \texttt{ecall} row may show extra delay cycles (\texttt{-}) before completing (Figure~\ref{fig:ecall_end}). This likely reflects how Ripes processes an environment call: after recognizing an exit request, it stops fetching new instructions, lets the pipeline drain, and then marks the simulation as finished. For that reason, completion is not inferred from ``falling off'' the end of memory or returning from \texttt{main}; it is triggered by the explicit exit environment call.
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/crop_ecall_early.png}{%
+        \includegraphics[width=0.92\textwidth]{img/crop_ecall_early.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: early trace showing the exit sequence. Save your screenshot as \texttt{img/crop\_ecall\_early.png}.}}%
+    }
+    \caption{Exit sequence visible in an early trace window: \texttt{addi x17, x0, 10} followed by \texttt{ecall}. The \texttt{addi} sets the environment\textendash call selector register (\texttt{a7/x17}) before the terminating \texttt{ecall} is issued.}
+    \label{fig:ecall_early}
+\end{figure}
+
+\begin{figure}[H]
+    \centering
+    \IfFileExists{img/crop_ecall_end.png}{%
+        \includegraphics[width=0.92\textwidth]{img/crop_ecall_end.png}%
+    }{%
+        \fbox{\parbox{0.9\textwidth}{Figure placeholder: final trace showing termination at the end of execution. Save your screenshot as \texttt{img/crop\_ecall\_end.png}.}}%
+    }
+    \caption{End of execution: the final \texttt{addi x17, x0, 10} and \texttt{ecall} sequence appears in the pipeline trace. After \texttt{ecall} is executed, Ripes halts the simulation and reports program completion.}
+    \label{fig:ecall_end}
+\end{figure}
+
 \section{Branches and Multiple-Issue}
 
 This section examines the performance of two pipelined processor 
@@ -499,7 +619,7 @@ Since our observations show \textbf{consistent flushing across all iterations}, 
 
 
 \subsubsection{Optimal CPI}
-The optimal Cycles Per Instruction (CPI) for a simple 5-stage scalar pipelined processor is \textbf{1.0}. In an ideal scenario without hazards, each stage of the pipeline is fully utilized, and the processor can complete and retire a new instruction on every clock cycle. This is achieved by overlapping the execution of instructions across the five stages (IF, ID, EX, ME, WB).
+The optimal Cycles Per Instruction (CPI) for a simple 5-stage scalar pipelined processor is \textbf{1.0}. In an ideal scenario without hazards, each stage of the pipeline is fully utilized and the processor can complete and retire a new instruction on every clock cycle. This is achieved by overlapping the execution of instructions across the five stages (IF, ID, EX, ME, WB).
 
 \subsubsection{Analysis of Observed Performance}
 The simulation of the insertion sort program yielded an observed CPI of \textbf{1.38}. This significant deviation from the optimal value of 1.0 indicates that pipeline hazards cause the processor to stall or flush for approximately 38\% of the total cycles. The performance penalty can be attributed to the two primary types of pipeline hazards present in the code.
@@ -541,7 +661,7 @@ The observed CPI for the insertion sort program (\textbf{1.38}) is slightly bett
 This discrepancy suggests that the specific instruction mix of the  insertion sort  is more efficient than the generic benchmark assumed in the lecture. Specifically, the insertion sort implementation likely contains a higher proportion of "safe" arithmetic/logic instructions relative to expensive control flow or load-use hazards, or the specific arrangement of instructions allows for fewer data stalls than the 11\% assumed in the general model.
 
 \subsection{6-stage dual issue processor}
-To understand the performance characteristics of the dual-issue configuration, we must first examine its underlying architecture. The simulated processor extends the classic pipeline into a 6-stage, dual-issue in-order design, as visually represented in the architectural diagram from the \textbf{Ripes} simulator shown in Figure~\ref{fig:6stage_dual_issue_pipeline}. This enhanced design aims to improve throughput by fetching, decoding, and executing two instructions per cycle.
+To understand the performance characteristics of the dual-issue configuration, we must first examine its underlying architecture. The simulated processor extends the classic pipeline into a 6-stage, dual-issue in-order design, as visually represented in the architectural diagram from the \textbf{Ripes} simulator shown in Figure~\ref{fig:6stage_dual_issue_pipeline}. This enhanced design aims to improve throughput by fetching, decoding and executing two instructions per cycle.
 \begin{figure}[h]
     \centering
     \includegraphics[width=0.9\linewidth]{img/6-stage_RISC-V_processor.jpeg}
@@ -560,7 +680,7 @@ The enhanced pipeline consists of the following stages:
     \item \textbf{Write Back (WB):} Write results back to the register file through multiple write ports.
 \end{enumerate}
 
-This design aims to achieve a theoretical throughput of two instructions per cycle (CPI = 0.5). However, practical limitations including dependencies, resource conflicts, and hazards reduce this ideal performance, as observed in the following analysis.
+This design aims to achieve a theoretical throughput of two instructions per cycle (CPI = 0.5). However, practical limitations including dependencies, resource conflicts and hazards reduce this ideal performance, as observed in the following analysis.
 
 
 \subsubsection{Pipeline Behavior Analysis}
@@ -726,16 +846,16 @@ The primary limitation arises from the inherently sequential nature of the algor
 
 Control hazards further degrade performance. The loop contains frequent branch instructions whose outcomes depend on recently computed values. Without advanced branch prediction or speculative execution mechanisms, each misprediction introduces pipeline flushing and wasted cycles.
 
-Microarchitectural constraints also contribute to the performance gap. Since the processor executes instructions strictly in program order, it cannot dynamically reorder independent instructions to fill unused issue slots. More advanced superscalar processors employ out-of-order execution, register renaming, and dynamic scheduling to overcome this limitation. In contrast, this simpler dual-issue design can only exploit ILP that naturally appears in program order.
+Microarchitectural constraints also contribute to the performance gap. Since the processor executes instructions strictly in program order, it cannot dynamically reorder independent instructions to fill unused issue slots. More advanced superscalar processors employ out-of-order execution, register renaming and dynamic scheduling to overcome this limitation. In contrast, this simpler dual-issue design can only exploit ILP that naturally appears in program order.
 
 Finally, the instruction mix plays a significant role. A considerable portion of instructions are memory operations, making the workload partially memory-bound. In such cases, increasing ALU resources does not proportionally improve performance because memory latency becomes the dominant bottleneck.
 
 
 \subsubsection{Optimal CPI}
 
-The theoretical optimal CPI of 0.5 assumes that two independent instructions are always available, that sufficient functional units exist, and that no hazards or stalls occur. Achieving this level of performance requires abundant ILP, perfect branch prediction, and balanced resource availability.
+The theoretical optimal CPI of 0.5 assumes that two independent instructions are always available, that sufficient functional units exist and that no hazards or stalls occur. Achieving this level of performance requires abundant ILP, perfect branch prediction and balanced resource availability.
 
-In practice, these conditions are not satisfied. The workload exposes limited parallelism, branch behavior introduces control penalties, and structural constraints restrict simultaneous execution of certain instruction classes. Consequently, the observed CPI of 1.26 reflects a realistic balance between architectural capability and workload characteristics.
+In practice, these conditions are not satisfied. The workload exposes limited parallelism, branch behavior introduces control penalties and structural constraints restrict simultaneous execution of certain instruction classes. Consequently, the observed CPI of 1.26 reflects a realistic balance between architectural capability and workload characteristics.
 
 This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it. 
 
@@ -763,21 +883,12 @@ Branch Penalty & 2 cycles & 3 cycles & Worse \\
 \label{tab:processor_comparison}
 \end{table}
 
-
-
-\end{document}
-
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
-
-
 % SECTION BIBLIOGRAPHY
-
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 
 \newpage % keep bibliography on a new page
 \bibliographystyle{plain}   % choose a style
 \bibliography{ref}      % name of .bib file (no .bib extension)
-
 
 \end{document}
