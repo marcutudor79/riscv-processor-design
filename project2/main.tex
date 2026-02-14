@@ -625,7 +625,7 @@ Since our observations show \textbf{consistent flushing across all iterations}, 
 
 
 \subsubsection{Optimal CPI}
-The optimal Cycles Per Instruction (CPI) for a simple 5-stage scalar pipelined processor is \textbf{1.0}. In an ideal scenario without hazards, each stage of the pipeline is fully utilized and the processor can complete and retire a new instruction on every clock cycle. This is achieved by overlapping the execution of instructions across the five stages (IF, ID, EX, ME, WB).
+The optimal Cycles Per Instruction (CPI) for a simple 5-stage pipelined processor is \textbf{1.0} \cite{patterson_hennessy_cod_riscv}. In an ideal scenario without hazards, each stage of the pipeline is fully utilized and the processor can complete and retire a new instruction on every clock cycle. This is achieved by overlapping the execution of instructions across the five stages (IF, ID, EX, ME, WB).
 
 \subsubsection{Analysis of Observed Performance}
 The simulation of the insertion sort program yielded an observed CPI of \textbf{1.38}. This significant deviation from the optimal value of 1.0 indicates that pipeline hazards cause the processor to stall or flush for approximately 38\% of the total cycles. The performance penalty can be attributed to the two primary types of pipeline hazards present in the code.
@@ -804,7 +804,7 @@ Figure~\ref{fig:dual_issue_hazards} illustrates the detailed timing behavior of 
 \caption{Pipeline behavior during the array copy loop.}
 \label{fig:dual_issue_hazards}
 \end{figure}
-A dominant factor limiting parallelism is the presence of data dependencies (RAW hazards). For instance, the instruction:
+A dominant factor limiting parallelism is the presence of data dependencies \cite{wall_ilp}. For instance, the instruction:
 
 \begin{lstlisting}[style=mystyle]
 lw x13, 0(x15)
