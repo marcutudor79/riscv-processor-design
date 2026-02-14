@@ -14,8 +14,8 @@ of a processor.
 - [🟢] Finish PR1 2nd task: December 19
 - [🟢] Finish PR1 3rd task: December 26
 - [🟢] Finish PR1 4th task: December 30
-- [🔴] Finish PR2 3rd task: January  16
-- [🔴] Finish PR2 4th task: January  23
+- [🟢] Finish PR2 3rd task: January  16
+- [🟢] Finish PR2 4th task: January  23
 - [🔴] Finish PR2 5th task  January  30
 - [🔴] Finish PR2 review overall: Deadline 15th february 2026 23:55
 
