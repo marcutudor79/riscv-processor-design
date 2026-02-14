@@ -181,7 +181,7 @@ The loop branch \texttt{bne x15, x12, -16} introduces a control hazard. In a sim
 
 \subsubsection{Structural hazard}
 The processor does not need to handle structural hazards since it has enough resources to execute all
-instructions without contention. For example, there are separate instruction and data memeory, so there
+instructions without contention. For example, there are separate instruction and data memory, so there
 are no structural hazards between instruction fetch and memory access stages. Also, there are enough
 functional units to handle all arithmetic and logic operations without contention.
 
@@ -222,8 +222,8 @@ The \texttt{ecall} row may show extra delay cycles (\texttt{-}) before completin
 
 \section{Branches and Multiple-Issue}
 
-This section examines the performance of two pipelined processor 
-configurations—a 5-stage single-issue and a 6-stage dual-issue 
+This section examines the performance of two pipelined processor
+configurations—a 5-stage single-issue and a 6-stage dual-issue
 processor—by simulating the execution of an insertion sort ELF binary.
 The analysis focuses on pipeline stalls, branch handling, data hazards,
 and overall CPI efficiency. Through systematic observation
@@ -250,8 +250,8 @@ The pipeline consists of the following stages:
     \item \textbf{Write Back (WB):} Write results back to the register file.
 \end{enumerate}
 
-This design aims to achieve a throughput of one instruction per cycle (CPI = 1.0). However, 
-hazards disrupt this flow, causing stalls and flushes that degrade performance, as observed 
+This design aims to achieve a throughput of one instruction per cycle (CPI = 1.0). However,
+hazards disrupt this flow, causing stalls and flushes that degrade performance, as observed
 in the following analysis.
 \subsubsection{Incomplete Instructions in the Pipeline}
 
@@ -368,17 +368,17 @@ Additionally, the pipeline diagram reveals \textbf{pipeline stalls} (indicated b
 
 \subsubsection{Branch Prediction Mechanism}
 Based on the observed pipeline behavior of the first loop in \texttt{< main >} (Figure \ref{fig:branch_flushing_extended} ), the processor does \textbf{not appear to have a sophisticated branch predictor}.
-The consistent pattern of pipeline flushing observed across all branch instructions indicates the absence of a dynamic branch predictor in this processor design. This conclusion is supported by several key observations:
+The consistent patterns observed across all branch instructions indicates the absence of a dynamic branch predictor in this processor design. This conclusion is supported by several key observations:
 \begin{itemize}
-    \item \textbf{Consistent Flushing Pattern}: Every taken branch exhibits identical flushing behavior, regardless of execution history. This suggests a static approach rather than adaptive learning.
-    
+    \item \textbf{Flushing Pattern}: Every taken branch exhibits identical flushing behavior, regardless of execution history. This suggests a static approach rather than adaptive learning.
+
     \item \textbf{No Learning Observed}: In a typical dynamic branch predictor (such as a two-bit saturating counter or branch history table), we would expect:
     \begin{enumerate}
         \item \textbf{Initial iterations}: Flushes would occur as the predictor learns branch behavior
         \item \textbf{Subsequent iterations}: After 2 executions, the predictor would accurately predict the branch direction, eliminating flushes
     \end{enumerate}
     The insertion sort algorithm contains loop branches that are typically taken many times consecutively. A competent dynamic predictor would quickly learn this pattern and avoid flushing after the initial learning phase.
-    
+
     \item \textbf{Statistical Evidence}: Analysis of the pipeline trace reveals that branches exhibit the same 2-cycle penalty (flushing 2 instructions) throughout execution, with no improvement over time. This static penalty pattern is characteristic of processors without branch prediction or with always-not-taken static prediction.
 \end{itemize}
 
@@ -392,10 +392,10 @@ To illustrate what we would expect with a dynamic branch predictor, consider the
 \begin{tabular}{|c|c|c|c|c|}
 \hline
 \rowcolor{blue!20}
-\textbf{Branch Iteration} & 
-\textbf{Predicted Outcome} & 
-\textbf{Actual Outcome} & 
-\textbf{Pipeline Flush} & 
+\textbf{Branch Iteration} &
+\textbf{Predicted Outcome} &
+\textbf{Actual Outcome} &
+\textbf{Pipeline Flush} &
 \textbf{Predictor State Update} \\
 \hline
 \rowcolor{red!30}
@@ -663,7 +663,7 @@ The lecture provides a theoretical analysis of processor performance based on a 
     \item A base CPI of 1.0 for arithmetic and other instructions .
 \end{itemize}
 
-The observed CPI for the insertion sort program (\textbf{1.38}) is slightly better (lower) than the lecture's theoretical average (\textbf{1.47}). 
+The observed CPI for the insertion sort program (\textbf{1.38}) is slightly better (lower) than the lecture's theoretical average (\textbf{1.47}).
 This discrepancy suggests that the specific instruction mix of the  insertion sort  is more efficient than the generic benchmark assumed in the lecture. Specifically, the insertion sort implementation likely contains a higher proportion of "safe" arithmetic/logic instructions relative to expensive control flow or load-use hazards, or the specific arrangement of instructions allows for fewer data stalls than the 11\% assumed in the general model.
 
 \subsection{6-stage dual issue processor}
@@ -743,44 +743,44 @@ Figure~\ref{fig:dual_issue_hazards} illustrates the detailed timing behavior of 
 \foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB} \node[stage, fill=orange!20] at (1.4*\c, 0) {\s};
 
 % lw x13 0 x15
-\foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB, 8/IF, 9/ID, 10/II, 11/EX, 12/MEM, 13/WB, 16/IF, 17/ID, 18/II, 19/EX, 20/MEM, 21/WB , 24/IF ,25/ID} 
+\foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB, 8/IF, 9/ID, 10/II, 11/EX, 12/MEM, 13/WB, 16/IF, 17/ID, 18/II, 19/EX, 20/MEM, 21/WB , 24/IF ,25/ID}
     \node[stage, fill=blue!20] at (1.4*\c, -1*1.2) {\s};
 
 % sw x13 0 x14
-\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/{IF/WB}, 9/ID, 10/-, 11/II, 12/-, 13/EX, 14/MEM, 15/WB, 16/IF, 17/ID, 18/-, 19/II, 20/-, 21/EX,22/MEM , 23/WB ,23/WB ,24/IF ,25/ID} 
+\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/{IF/WB}, 9/ID, 10/-, 11/II, 12/-, 13/EX, 14/MEM, 15/WB, 16/IF, 17/ID, 18/-, 19/II, 20/-, 21/EX,22/MEM , 23/WB ,23/WB ,24/IF ,25/ID}
     \node[stage, fill=green!20] at (1.4*\c, -2*1.2) {\s};
 
 % addi x15 x15 4
-\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/WB, 9/IF, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF} 
+\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/WB, 9/IF, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF}
     \node[stage, fill=cyan!20] at (1.4*\c, -3*1.2) {\s};
 
 % addi x14 x14 4
-\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/{IF/WB}, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF} 
+\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/{IF/WB}, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF}
     \node[stage, fill=yellow!20] at (1.4*\c, -4*1.2) {\s};
 
 % bne x15 x12 -16
-\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/WB, 11/IF, 12/-, 13/ID, 14/II, 15/EX, 16/MEM, 17/WB, 19/IF, 20/-, 21/ID, 22/II, 23/EX, 24/MEM, 25/WB} 
+\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/WB, 11/IF, 12/-, 13/ID, 14/II, 15/EX, 16/MEM, 17/WB, 19/IF, 20/-, 21/ID, 22/II, 23/EX, 24/MEM, 25/WB}
     \node[stage, fill=red!20] at (1.4*\c, -5*1.2) {\s};
 
 % --- Instructions Flushed (Grisées) ---
 % addi x9
-\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 11/IF, 12/-, 13/ID, 14/-, 15/II, 19/IF, 20/-, 21/ID, 22/-, 23/II} 
+\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 11/IF, 12/-, 13/ID, 14/-, 15/II, 19/IF, 20/-, 21/ID, 22/-, 23/II}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -6*1.2) {\s};
 
 % addi x19
-\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID} 
+\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -7*1.2) {\s};
 
 % addi x18
-\foreach \c/\s in {6/IF, 7/ID, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID} 
+\foreach \c/\s in {6/IF, 7/ID, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID}
     \node[stage,fill=gray!30 ,opacity=0.6] at (1.4*\c, -8*1.2) {\s};
 
 % sub x11
-\foreach \c/\s in {6/IF, 7/ID, 15/IF, 23/IF} 
+\foreach \c/\s in {6/IF, 7/ID, 15/IF, 23/IF}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -9*1.2) {\s};
 
 % addi x10
-\foreach \c/\s in {7/IF, 15/IF, 23/IF} 
+\foreach \c/\s in {7/IF, 15/IF, 23/IF}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -10*1.2) {\s};
 
 % jal x1
@@ -863,12 +863,12 @@ The theoretical optimal CPI of 0.5 assumes that two independent instructions are
 
 In practice, these conditions are not satisfied. The workload exposes limited parallelism, branch behavior introduces control penalties and structural constraints restrict simultaneous execution of certain instruction classes. Consequently, the observed CPI of 1.26 reflects a realistic balance between architectural capability and workload characteristics.
 
-This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it. 
+This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it.
 
 \subsubsection{Comparison with 5-Stage Processor}
 Table~\ref{tab:processor_comparison} presents a comparison between the classical 5-stage pipeline and the 6-stage dual-issue architecture. Although the dual-issue processor offers a theoretical CPI of 0.5 compared to 1.0 for the single-issue design, this ideal 2× speedup is not achieved in practice.
 
-The measured CPI decreases from 1.38 to 1.26, corresponding to an improvement of about 9\%. Similarly,indicating that the second issue slot is utilized in some cycles but remains frequently underused. This confirms that the workload exposes limited Instruction-Level Parallelism (ILP), preventing full exploitation of the dual-issue capability.
+The measured CPI decreases from 1.38 to 1.26, corresponding to an improvement of about 9\%. Similarly, indicating that the second issue slot is utilized in some cycles but remains frequently underused. This confirms that the workload exposes limited Instruction-Level Parallelism (ILP), preventing full exploitation of the dual-issue capability.
 It is also important to note that the branch penalty increases from 2 cycles to 3 cycles due to the deeper pipeline. As a result, control hazards become slightly more expensive, partially offsetting the throughput gains provided by dual issue.
 
 
@@ -880,9 +880,9 @@ It is also important to note that the branch penalty increases from 2 cycles to 
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{5-Stage} & \textbf{6-Stage Dual-Issue} & \textbf{Improvement} \\
 \hline
-Theoretical CPI & 1.0 & 0.5 & 2.0× \\
-Achieved CPI & 1.38 & 1.26 & 1.09× \\
-Branch Penalty & 2 cycles & 3 cycles & Worse \\
+Theoretical CPI & 1.0 & 0.5 & -2.0\% \\
+Achieved CPI & 1.38 & 1.26 & -1.09\% \\
+Branch Penalty & 2 cycles & 3 cycles & +1.5\% \\
 \hline
 \end{tabular}
 \caption{Performance comparison between processor configurations}
