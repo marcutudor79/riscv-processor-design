@@ -220,7 +220,59 @@ in the PR2-SE201-21.pdf document.
 
 \section{Simple Pipelining}
 
+\begin{itemize}
+    \item The 5-stage pipeline processor supports forwarding?
 
+    Yes the processor supports forwarding. This is explicitly said in the description of the processor
+    in Ripes. Also, it can be observed in the pipeline diagram that there are no stalls for data hazards.
+    An example set of instruction, where forwarding is used, can be the following:
+    \begin{lstlisting}
+        addi x2 x2 -16
+        sw   x1 12 x2
+    \end{lstlisting}
+    But as it can be seen in figure \ref{fig:forwarding-example}, the sw instruction does not stall
+    in the ID stage because it depends on the addi which hasn't yet completed its EX stage where the result is
+    computed.
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.4\textwidth]{img/forwarding-example.png}
+        \caption{Exaple of forwarding in the pipeline diagram}
+        \label{fig:forwarding-example}
+    \end{figure}
+
+    Capabilities of the processor and examples?
+    \item The processor is also able to handle control hazards by flushing instructions that were fetched
+    from the wrong path when a branch is taken. An example of this can be seen in the pipeline diagram
+    in figure \ref{fig:flushing-example}, where the two addi instructions are flushed.
+    \begin{figure}[htbp]
+        \centering
+        \includegraphics[width=0.4\textwidth]{img/flushing-example.png}
+        \caption{Example of instruction flushing due to a taken branch}
+        \label{fig:flushing-example}
+    \end{figure}
+
+    The processor does not need to handle structural hazards since it has enough resources to execute
+    all instructions without contention. For example, there are separate instruction and data memeory,
+    so there are no structural hazards between instruction fetch and memory access stages. Also, there are
+    enough functional units to handle all arithmetic and logic operations without contention.
+
+    \item A special kind of instruction is ecall which is used to make a system call to the operating system.
+    This instruction is used to request services from the operating system, such as input/output operations,
+    process management, and other system-level functions. When the ecall instruction is executed, it triggers
+    a trap to the operating system, which then handles the request and returns control back to the program.
+    This allows user programs to interact with the operating system and access resources in a controlled manner.
+
+    \item The simulator knows that the program has completed when the ecall instruction is executed with
+    the value "10" set in register a7. The instructions are depicted in the disassembly code of the ELF binary as follows:
+    \begin{lstlisting}
+	    addi x17 x0 10
+		ecall
+    \end{lstlisting}
+    By convention, and as per the "System calls" section of the help menu, this is implementing the exit with code 0
+    system call which indicates succeful program termination. Ecall with other values in a7 can be used to request
+    different services from the operating system, but in this case, the value 10 is used to signal program completion.
+
+\end{itemize}
 
 
 \section{Branches and Multiple-Issue}
