@@ -78,6 +78,54 @@
 }
 
 
+\lstdefinelanguage{MyASM}{
+  morekeywords={
+    lw, sw, CALL, NOP, RET, SUM, DIF, GTO, SHR, MES, MEL, BNZ
+  },
+  sensitive=true,
+  morecomment=[l]{;},
+  morestring=[b]"
+}
+
+
+\lstdefinestyle{asmstyle}{
+  language=MyASM,
+  basicstyle=\ttfamily\small,
+  keywordstyle=\color{blue}\bfseries,
+  commentstyle=\color{gray}\itshape,
+  stringstyle=\color{red!70!black},
+  numbers=left,
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  frame=single,
+  rulecolor=\color{black!40},
+  backgroundcolor=\color{gray!5},
+  tabsize=2,
+  showstringspaces=false,
+  breaklines=true,
+  captionpos=b
+}
+\graphicspath{ {./img/} }
+
+
+
+\lstset{
+  basicstyle=\ttfamily\small,      % letra de código
+  frame=single,                    % marco alrededor
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  commentstyle=\color{gray},
+  keywordstyle=\color{blue},
+  numbers=left,                    % números de línea
+  numberstyle=\tiny\color{gray},
+  stepnumber=1,
+  numbersep=8pt,
+  backgroundcolor=\color{gray!10}, % fondo suave
+  tabsize=2,
+  captionpos=b
+}
+
 % Pipeline diagram colors and macros
 \newcommand{\IF}{\cellcolor{blue!15}IF}
 \newcommand{\ID}{\cellcolor{green!20}ID}
@@ -150,7 +198,7 @@ program to run correctly.
 \texttt{-nostdlib} &
 Prevents the linker from using the standard system libraries and startup files.
 The C standard library (e.g., libc) is not linked automatically.
- \\ 
+ \\
 
 \texttt{-nostartfiles} &
 Prevents the inclusion of standard startup files such as crt0.o,
@@ -533,10 +581,10 @@ Upon completion of the program execution, the following performance statistics w
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{Value} \\ \hline
 
-Cycles & 58998 \\ 
-Instructions retired & 42770 \\ 
-CPI & 1.38 \\ 
-IPC & 0.725 \\ 
+Cycles & 58998 \\
+Instructions retired & 42770 \\
+CPI & 1.38 \\
+IPC & 0.725 \\
 Clock rate & 13.27 KHz \\ \hline
 
 \end{tabular}
@@ -553,10 +601,10 @@ When switching to the single cycle processor, the program has the following stat
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{Value} \\ \hline
 
-Cycles & 42770 \\ 
-Instructions retired & 42770 \\ 
-CPI & 1 \\ 
-IPC & 1 \\ 
+Cycles & 42770 \\
+Instructions retired & 42770 \\
+CPI & 1 \\
+IPC & 1 \\
 Clock rate & 44.84 KHz \\ \hline
 
 \end{tabular}
@@ -1496,7 +1544,7 @@ It is also important to note that the branch penalty increases from 2 cycles to 
 \textbf{Metric} & \textbf{5-Stage} & \textbf{6-Stage Dual-Issue} & \textbf{Improvement} \\
 \hline
 Theoretical CPI & 1.0 & 0.5 & -2.0\% \\
-Achieved CPI & 1.38 & 1.26 & -1.09\% \\ 
+Achieved CPI & 1.38 & 1.26 & -1.09\% \\
 Branch Penalty & 2 cycles & 3 cycles & +1.5\% \\
 \hline
 \end{tabular}
@@ -1505,6 +1553,203 @@ Branch Penalty & 2 cycles & 3 cycles & +1.5\% \\
 \end{table}
 
 \section{Caches}
+
+\subsection{Memory Analysis}
+
+\subsubsection*{Instructions}
+
+Each instruction in the \texttt{.text} section is fetched from memory during execution. In order to determine the total number of distinct instruction memory accesses, the address range of each function was analyzed. Since each RISC-V instruction occupies 4 bytes, the number of instructions in each function can be calculated by dividing the total byte range by 4. The results are summarized in the following table.
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{3cm}|p{3.5cm}|p{3cm}|p{3cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Function} & \textbf{Address Range} & \textbf{Size (bytes)} & \textbf{Instructions} \\ \hline
+
+\texttt{minIndex} & 0x10094 -- 0x100dc & 0x4c (76 bytes) & 19 \\ \hline
+\texttt{main} & 0x100e0 -- 0x10180 & 0xa4 (164 bytes) & 41 \\ \hline
+\texttt{\_start} & 0x10184 -- 0x101a0 & 0x20 (32 bytes) & 8 \\ \hline
+
+\end{tabular}
+\caption{Instruction memory usage per function in the \texttt{.text} section}
+\end{table}
+
+The total number of instructions in the \texttt{.text} section is 68 (words), obtained by adding the instructions from \texttt{minIndex} (19), \texttt{main} (41), and \texttt{\_start} (8). All these instructions are located within the address range \texttt{0x10094} to \texttt{0x101a0}. Therefore, this results in 68 distinct instruction memory addresses that may be read during program execution.
+
+
+\subsubsection*{Data access}
+
+\begin{itemize}
+    \item \textbf{Global Variables}
+\end{itemize}
+
+The only variable stored in the \texttt{.data} section is the global array \texttt{input}. The corresponding information is presented in the following table.
+
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{6cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Property} & \textbf{Value} \\ \hline
+
+Array name & \texttt{input} \\ \hline
+Number of elements & 99 integers (SIZE) \\ \hline
+Size of each integer & 4 bytes \\ \hline
+Total size in memory & 99 $\times$ 4 = 396 bytes \\ \hline
+Memory words accessed & 396 / 4 = 99 words \\ \hline
+
+\end{tabular}
+\caption{Memory characteristics of the \texttt{input} array}
+\end{table}
+
+
+Each element is accessed only once during the copy operation to \texttt{buf}, and the array is not referenced again afterwards. Consequently, retaining its memory blocks in the cache does not provide any performance benefit.
+
+
+
+\begin{itemize}
+    \item \textbf{Local Variables}
+\end{itemize}
+
+The \texttt{buf} array is a copy of the \texttt{input} array stored on the stack. Therefore, it has the same characteristics in terms of size, number of elements, and memory layout.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{6cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Property} & \textbf{Value} \\ \hline
+
+Array name & \texttt{buf} \\ \hline
+Number of elements & 99 integers (SIZE) \\ \hline
+Size of each integer & 4 bytes \\ \hline
+Total size in memory & 99 $\times$ 4 = 396 bytes \\ \hline
+Memory words accessed & 396 / 4 = 99 words \\ \hline
+
+
+\end{tabular}
+\caption{Memory characteristics of the \texttt{buf} array}
+\end{table}
+
+Unlike \texttt{input}, the memory locations of \texttt{buf} are accessed multiple times throughout the sorting procedure. Consequently, caching these blocks is advantageous, since it reduces memory access latency and increases the likelihood of cache hits.
+
+
+
+\begin{itemize}
+    \item \textbf{Prologue and Epilogue}
+\end{itemize}
+
+In the \texttt{main} function, several memory accesses to the stack occur as part of the function prologue and epilogue. At the beginning of the function, five \texttt{sw} instructions store the registers \texttt{ra}, \texttt{s0}, \texttt{s1}, \texttt{s2}, and \texttt{s3} onto the stack in order to preserve their values. At the end of the function, six \texttt{lw} instructions restore these registers (as well as the return value register \textbf{a0}) from the stack. Altogether, this results in 11 additional data memory accesses, which would be made on 6 different memory positions  caused by stack operations within \texttt{main}.
+
+
+\begin{lstlisting}
+sw ra,428(sp)  lw a0,4(sp)     lw s3,412(sp)
+sw s0,424(sp)  lw ra,428(sp)
+sw s1,420(sp)  lw s0,424(sp)
+sw s2,416(sp)  lw s1,420(sp)
+sw s3,412(sp)  lw s2,416(sp)
+\end{lstlisting}
+
+Similarly, the \texttt{\_start} function also performs stack access. In this case, a single \texttt{sw} instruction stores the return address register (\texttt{ra}) onto the stack. This contributes one additional data memory access. Therefore, the stack operations in \texttt{\_start} account for one extra memory access during execution.
+
+\begin{lstlisting}
+sw ra,12(sp)
+\end{lstlisting}
+
+This leads to a total of 7 additional distinct memory addresses that may be accessed during execution.
+
+
+
+\begin{itemize}
+    \item \textbf{Data access conclusion}
+\end{itemize}
+
+Considering the 99 memory locations corresponding to the global \texttt{input} array, the 99 locations of the local \texttt{buf} array, and the 7 stack locations involved in load and store operations, the program may access up to 205 distinct data memory addresses during execution.
+
+
+\subsection{Speculations about the cache}
+
+
+
+\subsubsection*{Data Cache}
+
+In this case, it is known that up to 205 distinct data memory locations may be accessed during execution. Therefore, in order to minimize capacity misses and reduce potential conflicts due to insufficient cache space, it is reasonable to configure the cache with at least 205 available slots. Since cache sizes are typically powers of two, the closest higher power of two is 256 (2\textsuperscript{8}).
+
+Accordingly, a configuration with 2\textsuperscript{4} lines (16 sets), 2\textsuperscript{2} ways (4-way associativity), and 2\textsuperscript{2} blocks per line (4 words per block) is proposed. This results in a total cache size of 9984 bits. Under this configuration, the execution produces 10\,448 hits and 53 misses.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{6cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Parameter} & \textbf{Value} \\ \hline
+
+$2^N$ Lines & $2^4 = 16$ \\ \hline
+$2^N$ Ways & $2^2 = 4$ \\ \hline
+$2^N$ Blocks & $2^2 = 4$ \\ \hline
+Total size & 9920 bits \\ \hline
+Hit rate & 0.995 \\ \hline
+Hits & 10\,448 \\ \hline
+Misses & 53 \\ \hline
+Writebacks & 301 \\ \hline
+\end{tabular}
+\caption{Proposed data cache configuration and simulation results}
+\end{table}
+
+
+
+\subsubsection*{Instruction Cache}
+
+For the instruction cache, a total of 68 distinct instruction memory locations are accessed. To avoid capacity-related misses and ensure sufficient cache space, the next power of two greater than 68 is selected, namely 128 (2\textsuperscript{7}).
+
+To achieve this, a configuration with 16 lines (2\textsuperscript{4}), 2 ways (2\textsuperscript{1}), and 4 blocks per line (2\textsuperscript{2}) is proposed. This results in a total cache size of 4928 bits. With this configuration, the following performance metrics were obtained.
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{6cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Instruction Cache Parameter} & \textbf{Value} \\ \hline
+
+$2^N$ Lines & $2^4 = 16$ \\ \hline
+$2^N$ Ways & $2^1 = 2$ \\ \hline
+$2^N$ Blocks & $2^2 = 4$ \\ \hline
+Total size & 4928 bits \\ \hline
+Hit rate & 0.9996 \\ \hline
+Hits & 42754 \\ \hline
+Misses & 17 \\ \hline
+Writebacks & 0 \\ \hline
+\end{tabular}
+\caption{Proposed Instruction cache configuration and simulation results}
+\end{table}
+
+
+
+\subsection{Cache analysis}
+
+
+
+
+
+
+
+
+
 
 \subsection{Cache miss}
 In this subsection we are focusing in on illustrating different scenarios of cache misses (compulsory,
@@ -1615,8 +1860,6 @@ but instead writing directly to memory.
     \caption{NWA: no stack addresses appear, all writes are cache miss}
     \label{fig:no-write-allocate}
 \end{figure}
-
-
 
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
