@@ -889,6 +889,121 @@ Branch Penalty & 2 cycles & 3 cycles & +1.5\% \\
 \label{tab:processor_comparison}
 \end{table}
 
+\section{Caches}
+
+\subsection{Cache miss}
+In this subsection we are focusing in on illustrating different scenarios of cache misses (compulsory,
+capacity and conflict) using the \textbf{Ripes} simulator. Compulsory misses are the type of cache miss
+which occurs when a block of data is accessed for the first time and has never been loaded into the cache.
+This kind of miss is unavoidable and occurs in any configuration of cache.
+
+For example for a data cache configuration of 1KB total size with 2 lines, 4 way associative and block
+sizes of 16 bytes exhibits a compulsory miss when the \textbf{sw x1 12 x2} instruction is executed from
+the \_start function, as depicted in \ref{fig:compulsory_miss}. Another example of compulsory miss would
+happen when the program reaches main and the processor executes \textbf{sw x1 428 x2}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/compulsory-cache-miss.png}
+    \caption{Compulsory miss on data cache when executing \_start function}
+    \label{fig:compulsory_miss}
+\end{figure}
+
+When speaking of conflict misses, they occur when multiple blocks of data compete for the same cache line due to
+the cache's mapping scheme. For instance, in a direct-mapped cache, if two different memory addresses map to the same
+cache line, they will evict each other, leading to conflict misses.
+
+In an instruction cache configuration of 47B with 2 lines, 2 way associative and 2 blocks the following
+instructions will cause conflict misses, as per figure \ref{fig:conflict_miss}:
+
+\begin{lstlisting}
+	10184:	addi x2 x2 -16
+        100f0:	sw x18 416 x2
+\end{lstlisting}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/conflict-cache-miss.png}
+    \caption{Conflict miss on instruction cache when executing \_start and main functions}
+    \label{fig:conflict_miss}
+\end{figure}
+
+\newpage
+Finally, capacity misses occur when the cache cannot contain all the blocks needed during execution, even if there are no conflicts.
+This happens when the working set of the program exceeds the total cache size. For example, if we have a data
+cache of 1KB total size with 2 lines, 4 way associative and block sizes of 16 bytes, and the program accesses
+more than 64 bytes of data (which is the total capacity of the cache), it will result in capacity misses.
+
+This is illustrated in figure \ref{fig:capacity_miss} when the program executes the following instructions:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/capacity-cache-miss.png}
+    \caption{Capacity miss on data cache when executing main functions}
+    \label{fig:capacity_miss}
+\end{figure}
+
+\newpage
+\subsection{Write Allocate vs No Write Allocate}
+
+When using write allocate (WA), the cache line is loaded into the cache on a write miss before the
+store operation is performed. A concrete example of this behavior can be observed when copying data
+from the input array to the buf array in the first loop of the main function. Consider the first store
+to a new line of the destination. Destination addresses written: $D+0$, $D+4$, $D+8$, $D+12$, $D+16$, ...
+
+For the first store to $D+0$:
+\begin{itemize}
+    \item \texttt{sw D+0} $\rightarrow$ write miss
+    \item With WA: cache fetches whole line into L1
+    \item Then performs store into the line $\rightarrow$ line is now dirty
+    \item The next stores ($D+4$, $D+8$ ...) are write hits (fast, no extra line fetches)
+\end{itemize}
+
+So per 16B line, you pay one line fill, then get cheap hits.
+
+When using no write allocate (NWA), the cache does not load the line on a write miss. Instead, it
+writes the data directly to memory. Therefore, this will yield to a different cost per write in the
+case of the above mentioned for loop.
+
+First store to $D+0$:
+\begin{itemize}
+    \item \texttt{sw D+0} $\rightarrow$ write miss
+    \item With NWA: do not load the line
+    \item The word is written to memory
+\end{itemize}
+
+Next store to $D+4$:
+\begin{itemize}
+    \item still a miss, still write-around
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/write-allocate.png}
+    \caption{WA: stack addresses appear, block 1 hit, by write-allocate}
+    \label{fig:write-allocate}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/write-allocate-2.png}
+    \caption{WA: stack addresses appear, block 0 miss, compulsory}
+    \label{fig:write-allocate}
+\end{figure}
+
+In the next figure the NWA policy is illustrated. As it can be seen no stack addresses appear, even if
+the same instructions are executed. This is because the cache is not loading the line on a write miss,
+but instead writing directly to memory.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/no-write-allocate.png}
+    \caption{NWA: no stack addresses appear, all writes are cache miss}
+    \label{fig:write-allocate}
+\end{figure}
+
+
+
+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SECTION BIBLIOGRAPHY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
