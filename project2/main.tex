@@ -1064,6 +1064,7 @@ This leads to a total of 7 additional distinct memory addresses that may be acce
 \end{itemize}
 
 Considering the 99 memory locations corresponding to the global \texttt{input} array, the 99 locations of the local \texttt{buf} array, and the 7 stack locations involved in load and store operations, the program may access up to 205 distinct data memory addresses during execution.
+This corresponds to the particular case under study. More generally, the total number of distinct data memory locations accessed during execution can be described by the expression $2N + 7$, where $N$ denotes the number of elements in each array and 7 represents the stack-related memory accesses.
 
 
 \subsection{Speculations about the cache}
@@ -1135,10 +1136,263 @@ Writebacks & 0 \\ \hline
 
 
 
+\subsubsection*{Instruction Cache}
+
+\paragraph{Instruction Cache Capacity Selection}\mbox{}\\
+
+First, the number of cache slots must be determined in order to reduce capacity misses and ensure that each instruction can be mapped without unnecessary conflicts. In this case, there are 68 instructions. To avoid capacity limitations, the cache should be able to contain at least this number of instruction words. Since cache parameters are typically powers of two, the next power of two greater than 68 is 128, which corresponds to $2^{7}$.
+
+The total number of cache blocks is determined by:
+
+\[
+2^{L} \times 2^{W} \times 2^{B}
+\]
+
+where:
+\begin{itemize}
+    \item $L$ is the number of index bits (number of sets),
+    \item $W$ is the associativity (number of ways),
+    \item $B$ corresponds to the block offset bits (block size).
+\end{itemize}
+
+Therefore, to obtain a total capacity of 128 instruction words, the following condition must hold:
+
+\[
+2^{L} \cdot 2^{W} \cdot 2^{B} = 2^{7}
+\quad \Longleftrightarrow \quad
+L + W + B = 7
+\]
+
+
+This guarantees that the cache has sufficient capacity (128 instruction words) to store all 68 instructions while minimizing capacity misses.
+
+
+\paragraph{Block Organization and Compulsory Miss Reduction}\mbox{}\\
+
+Once the total cache capacity has been defined, capacity misses are no longer a concern. The next step is to determine the block organization in order to reduce compulsory misses when accessing new instruction addresses.
+
+Since all instructions are stored consecutively in memory, spatial locality can be fully exploited. Therefore, the most straightforward solution is to define a block size large enough so that all instructions are fetched when the first instruction is loaded into the cache. In this way, only one compulsory miss occurs during the initial access, and all subsequent instruction accesses result in cache hits.
+
+Based on this reasoning, the following configuration is proposed:
+
+\begin{itemize}
+    \item 1 line (set)
+    \item 1 way (direct-mapped)
+    \item 128 words per block
+\end{itemize}
+
+This configuration allows the entire instruction sequence to be stored in a single cache block, ensuring that after the first miss, all instructions remain accessible without additional compulsory misses.
+
+The resulting total cache size for this configuration is 4121 bits.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{4cm}|p{4cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Lines & $2^{0} = 1$ \\
+Ways & $2^{0} = 1$ \\
+Blocks (Block Size) & $2^{7} = 128$ \\
+Total Size (bits) & 4121 \\
+Cache Hits & 42770 \\
+Cache Misses & 1 \\
+\hline
+\end{tabular}
+\caption{Instruction Cache Configuration and Performance Results}
+\label{tab:icache_config}
+\end{table}
 
 
 
+\subsubsection*{Data Cache}
 
+
+
+\paragraph{Data Cache Capacity Selection}\mbox{}\\
+
+
+In this case, a similar approach is applied. Since 205 memory positions are accessed, the cache must have sufficient capacity to avoid capacity misses caused by insufficient space.
+
+Therefore, the minimum required capacity must be at least 205 data words. As cache configurations are defined in powers of two, the next power of two greater than 205 is 256, which corresponds to $2^{8}$.
+
+Thus, the cache parameters must satisfy:
+
+\[
+2^{L} \cdot 2^{W} \cdot 2^{B} = 2^{8}
+\quad \Longleftrightarrow \quad
+L + W + B = 8
+\]
+
+This guarantees that the cache has enough total capacity (256 data words) to accommodate all accessed memory positions while minimizing capacity misses.
+
+
+\paragraph{Data Cache Organization and Compulsory Miss Reduction - First approach (Reducing memory)}\mbox{}\\
+
+In this case, three different memory regions are accessed during execution: the input array, the buffer array (buf), and the stack (used during the function prologue and epilogue).
+
+Since each of these memory regions is stored contiguously in memory, spatial locality can be exploited by selecting a block size large enough to contain each array within a single block. Based on this reasoning, a configuration with $2^{7}$ blocks (128 words per block) and 2 ways is proposed. The use of two ways allows different memory regions to coexist within the same set without immediate replacement.
+
+However, with this configuration, the total cache capacity is not sufficient to simultaneously store the entire input array, the buffer array, and the stack accesses. As a result, at least three compulsory misses will occur:
+
+\begin{itemize}
+    \item One compulsory miss when the input array is first accessed.
+    \item One compulsory miss when the buffer array is first accessed.
+    \item One compulsory miss when the stack region (prologue/epilogue accesses) is first accessed.
+\end{itemize}
+
+After these initial compulsory misses, additional misses may occur due to capacity limitations if the three memory regions compete for cache space and cannot coexist simultaneously.
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{4cm}|p{4cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Lines & $2^{0} = 1$ \\
+Ways & $2^{1} = 2$ \\
+Blocks (Block Size) & $2^{7} = 128$ \\
+Total Size (bits) & 8244 \\
+Cache Hits & 10498 \\
+Cache Misses & 3 \\
+\hline
+\end{tabular}
+\caption{Data Cache Configuration and Performance Results}
+\label{tab:dcache_config}
+\end{table}
+
+
+\paragraph{Data Cache Organization and Compulsory Miss Reduction - Second approach (Reducing misses)}\mbox{}\\
+
+While analyzing the results, we noticed that an alternative strategy could be applied: reducing misses by increasing the block size, even at the cost of a larger cache.
+
+The main idea is to use a larger block so that all stack-related accesses (including the \texttt{buf} region as well as the function prologue and epilogue accesses) are captured within the same cache block. With this approach, increasing the block size to 256 words ($2^{8}$) reduces the number of misses to 2:
+\begin{itemize}
+    \item One miss when the input region is accessed for the first time.
+    \item One miss when the stack region is first accessed (prologue/epilogue and related stack accesses).
+\end{itemize}
+
+This configuration improves performance by reducing the number of first-time block fetches, but it increases the cache size due to the larger block.
+
+\medskip
+
+The resulting configuration and performance metrics are summarized in Table~\ref{tab:dcache_alt_256}.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{4cm}|p{4cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Parameter} & \textbf{Value} \\
+\hline
+Lines & $2^{0} = 1$ \\
+Ways & $2^{1} = 2$ \\
+Blocks (Block Size) & $2^{8} = 256$ \\
+Total Size (bits) & 16434 \\
+Cache Hits & 10499 \\
+Cache Misses & 2 \\
+\hline
+\end{tabular}
+\caption{Alternative Data Cache Configuration (256-word Block) and Performance Results}
+\label{tab:dcache_alt_256}
+\end{table}
+
+\subsection{Proposed Efficiency Metric}
+
+
+
+In order to evaluate the efficiency of each cache configuration, a metric that combines performance and hardware cost is required. Let $M$ denote the total number of misses, $A$ the total number of memory accesses, and $S$ the cache size in bits. The miss rate is defined as:
+
+\[
+r_M = \frac{M}{A}
+\]
+
+This quantity represents the probability that a memory access results in a cache miss. To incorporate the hardware cost into the evaluation, we define the following efficiency metric:
+
+\[
+E = r_M \cdot S = \frac{M}{A} \cdot S
+\]
+
+This metric penalizes both high miss rates and large hardware sizes. A configuration with a low miss rate but excessively large size may not be efficient, just as a small cache with a high miss rate may lead to poor performance. Therefore, minimizing $E$ provides a balanced trade-off between cache performance and implementation cost, allowing for a fair comparison between different configurations without introducing additional weighting parameters.
+
+\paragraph{Instruction Cache Configuration Comparison}\mbox{}\\
+
+Two instruction cache configurations were evaluated in order to determine the most efficient design according to the proposed metric.
+
+\medskip
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{3cm}|p{3cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Parameter} & \textbf{Configuration 1} & \textbf{Configuration 2} \\
+\hline
+Lines & $2^{0} = 1$ & $2^{1} = 2$ \\
+Ways & $2^{0} = 1$ & $2^{1} = 2$ \\
+Blocks (Block Size) & $2^{7} = 128$ & $2^{4} = 16$ \\
+Size (bits) & 4121 & 2160 \\
+Total Accesses ($A$) & 42771 & 42771 \\
+Misses ($M$) & 1 & 6 \\
+Miss Rate ($r = M/A$) & $2.34 \times 10^{-5}$ & $1.40 \times 10^{-4}$ \\
+Efficiency Metric ($E = r \cdot S$) & 0.0963 & 0.303 \\
+\hline
+\end{tabular}
+\caption{Instruction Cache Configuration and Efficiency Comparison}
+\label{tab:icache_comparison_full}
+\end{table}
+
+\medskip
+
+Since $E_1 < E_2$, Configuration 1 is more efficient according to the defined metric. Although it requires a larger hardware size, the significant reduction in miss rate compensates for the increase in cache size.
+
+Given the high number of instruction accesses, even a small increase in the number of misses has a measurable impact on overall efficiency. Therefore, for the instruction cache, minimizing misses proves to be more beneficial than reducing hardware size.
+
+
+\paragraph{Data Cache Configuration Comparison}\mbox{}\\
+
+Two data cache configurations were evaluated using the proposed efficiency metric.
+
+\medskip
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{3cm}|p{3cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Parameter} & \textbf{Configuration 1} & \textbf{Configuration 2} \\
+\hline
+Lines & $2^{0} = 1$ & $2^{0} = 1$ \\
+Ways & $2^{1} = 2$ & $2^{1} = 2$ \\
+Blocks (Block Size) & $2^{7} = 128$ & $2^{8} = 256$ \\
+Size (bits) & 8244 & 16343 \\
+Total Accesses ($A$) & 10501 & 10501 \\
+Misses ($M$) & 3 & 2 \\
+Miss Rate ($r = M/A$) & $2.86 \times 10^{-4}$ & $1.90 \times 10^{-4}$ \\
+Efficiency Metric ($E = r \cdot S$) & 2.35 & 3.11 \\
+\hline
+\end{tabular}
+\caption{Data Cache Configuration and Efficiency Comparison}
+\label{tab:dcache_comparison_full}
+\end{table}
+
+
+\medskip
+
+Since $E_1 < E_2$, Configuration 1 provides a better balance between performance and hardware cost. Although Configuration 2 slightly reduces the number of misses, the significant increase in cache size does not justify the marginal improvement in miss rate.
 
 
 
