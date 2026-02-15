@@ -2173,7 +2173,8 @@ but instead writing directly to memory.
     \label{fig:no-write-allocate}
 \end{figure}
 
-\section{conclusion}
+\newpage
+\section{Conclusion}
 This report presented a comprehensive analysis of a RISC-V implementation of insertion sort using the Ripes simulator, examining the interaction between software and hardware across pipeline execution, multiple-issue architectures, and cache hierarchy.
 
 Pipeline analysis of the 5-stage design showed a CPI of 1.38, exceeding the theoretical optimum due to load-use hazards requiring one-cycle stalls and taken branches incurring two-cycle flushes—hazards inherent to the algorithm's tight dependency chains and loop-intensive structure. The 6-stage dual-issue processor achieved a CPI of 1.26, an $8.7\%$ improvement that falls significantly short of the theoretical 2× speedup. This marginal gain underscores a fundamental architectural principle: increasing issue width alone cannot overcome software-imposed limitations, as the workload's sequential data dependencies and control flow patterns expose insufficient instruction-level parallelism.
