@@ -178,7 +178,7 @@ Particular attention is given to performance metrics such as CPI (Cycles Per Ins
 
 \subsection{RISC-V Tools}
 
-When compiling the C code of code insertion-sort.c, multiple flags are used to control the behavior
+When compiling the C code in insertion-sort.c, multiple flags are used to control the behavior
 of the compiler and linker. The most remarkable ones are \texttt{-nostdlib} and \texttt{-nostartfiles},
 which prevent the inclusion of standard libraries and startup files, respectively. This means that the
 resulting binary will not include the usual C runtime initialization code, and the programmer must
@@ -446,7 +446,7 @@ the execution branches back to 0x1010c, repeating the process. Overall, this loo
 of the input array into the buf array, element by element.
 
 The symbol \texttt{input} is located at address \texttt{0x000111a4}, as indicated by the command output.
-This is a relevant information to know in the context of position-independent code (PIC), as it allows us
+This is relevant information to know in the context of position-independent code (PIC), as it allows us
 to identify how the program accesses global variables and whether it uses absolute or relative addressing.
 In this case, the presence of an absolute address for \texttt{input} suggests that the code is not position-independent,
 as it relies on fixed memory addresses rather than calculating them at runtime based on the program's location in memory.
@@ -504,7 +504,7 @@ PIC is especially useful when compiling:
 
 \subsubsection*{Why is PIC essential for modern security mechanisms?}
 PIC is a key enabler for ASLR (Address Space Layout Randomization) applied to code segments, and the ASLR
-ASLR helps to randomize where code (and other segments) are loaded to make exploits (e.g., ROP) harder.
+ helps to randomize where code (and other segments) are loaded to make exploits (e.g., ROP) harder.
 
 
 \subsubsection*{What role does auipc play for PIC?}
@@ -613,8 +613,8 @@ Clock rate & 44.84 KHz \\ \hline
 
 By comparison with the simple 5 stage processor, the latter obtains a better CPI since
 it executes one instruction per cycle, while the 5 stage processor has a CPI of 1.38 due to pipeline stalls and flushes.
-The retired instructions are the same in both cases, which is expected since the program logic does not change. The total
-cycles are significantly higher in the single in the 5 stage processor due to the overhead of pipelining.
+The retired instructions are the same in both cases, which is expected since the program logic does not change. The total cycles are significantly
+higher in the 5-stage processor than in the single-cycle processor due to the overhead of pipelining.
 
 \section{Simple Pipelining}
 \subsection{Setup and initial view}
@@ -1578,7 +1578,12 @@ Each instruction in the \texttt{.text} section is fetched from memory during exe
 \caption{Instruction memory usage per function in the \texttt{.text} section}
 \end{table}
 
-The total number of instructions in the \texttt{.text} section is 68 (words), obtained by adding the instructions from \texttt{minIndex} (19), \texttt{main} (41), and \texttt{\_start} (8). All these instructions are located within the address range \texttt{0x10094} to \texttt{0x101a0}. Therefore, this results in 68 distinct instruction memory addresses that may be read during program execution.
+The total number of instructions in the \texttt{.text} section is 68 (words), obtained by adding the instructions from \texttt{minIndex} (19), \texttt{main} (41), and \texttt{\_start} (8). All these instructions are located within the address range \texttt{0x10094} to \texttt{0x101a0}. Therefore, this results in 68 distinct instruction memory addresses that may be read during program execution,
+assuming that all instructions in the loops are cached and not retrieved multiple times from the instruction memory.
+
+\begin{center}
+    Total distinct instruction memory accesses: constant. There is no dependency on the size of input
+\end{center}
 
 
 \subsubsection*{Data access}
@@ -1675,8 +1680,13 @@ This leads to a total of 7 additional distinct memory addresses that may be acce
 \end{itemize}
 
 Considering the 99 memory locations corresponding to the global \texttt{input} array, the 99 locations of the local \texttt{buf} array, and the 7 stack locations involved in load and store operations, the program may access up to 205 distinct data memory addresses during execution.
-This corresponds to the particular case under study. More generally, the total number of distinct data memory locations accessed during execution can be described by the expression $2N + 7$, where $N$ denotes the number of elements in each array and 7 represents the stack-related memory accesses.
+This corresponds to the particular case under study. More generally, the total number of distinct data memory locations accessed during execution can be described by the following expression, where $N$ denotes the number of elements in each array and 7 represents the stack-related memory accesses.
 
+\begin{center}
+    $2N + 7$
+
+    Expression for the total number of distinct data memory locations accessed during execution
+\end{center}
 
 \subsection{Speculations about the cache}
 
@@ -1820,6 +1830,7 @@ Cache Misses & 1 \\
 
 
 \subsubsection*{Data Cache}
+
 
 
 \paragraph{Data Cache Capacity Selection}\mbox{}\\
@@ -2004,12 +2015,6 @@ Efficiency Metric ($E = r \cdot S$) & 2.35 & 3.12 \\
 
 Since $E_1 < E_2$, Configuration 1 provides a better balance between performance and hardware cost. Although Configuration 2 slightly reduces the number of misses, the significant increase in cache size does not justify the marginal improvement in miss rate.
 
-\subsection{Cache miss}
-
-In this subsection we are focusing in on illustrating different scenarios of cache misses (compulsory,
-capacity and conflict) using the \textbf{Ripes} simulator. Compulsory misses are the type of cache miss
-which occurs when a block of data is accessed for the first time and has never been loaded into the cache.
-This kind of miss is unavoidable and occurs in any configuration of cache.
 
 \subsection{Data Access Patterns and Cache Policies}
 
@@ -2057,31 +2062,16 @@ The observed data access patterns partially align with the selected cache polici
 
 Overall, while the cache configuration benefits from spatial and temporal locality through block-based transfers and LRU replacement, the write-through policy may introduce additional memory traffic compared to a write-back configuration.
 
+\subsection{Cache miss}
+In this subsection we are focusing on illustrating different scenarios of cache misses (compulsory,
+capacity and conflict) using the \textbf{Ripes} simulator. Compulsory misses are the type of cache miss
+which occurs when a block of data is accessed for the first time and has never been loaded into the cache.
+This kind of miss is unavoidable and occurs in any configuration of cache.
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+For example for a data cache configuration of 1KB total size with 2 lines, 4-way associative and block
+sizes of 16 bytes exhibits a compulsory miss when the \textbf{sw x1 12 x2} instruction is executed from
+the \_start function, as depicted in \ref{fig:compulsory_miss}. Another example of compulsory miss would
+happen when the program reaches main and the processor executes \textbf{sw x1 428 x2}.
 
 \begin{figure}[h]
     \centering
@@ -2099,7 +2089,7 @@ instructions will cause conflict misses, as per figure \ref{fig:conflict_miss}:
 
 \begin{lstlisting}
 	10184:	addi x2 x2 -16
-        100f0:	sw x18 416 x2
+  100f0:	sw x18 416 x2
 \end{lstlisting}
 
 \begin{figure}[h]
@@ -2109,7 +2099,6 @@ instructions will cause conflict misses, as per figure \ref{fig:conflict_miss}:
     \label{fig:conflict_miss}
 \end{figure}
 
-\newpage
 Finally, capacity misses occur when the cache cannot contain all the blocks needed during execution, even if there are no conflicts.
 This happens when the working set of the program exceeds the total cache size. For example, if we have a data
 cache of 1KB total size with 2 lines, 4 way associative and block sizes of 16 bytes, and the program accesses
@@ -2142,8 +2131,8 @@ For the first store to $D+0$:
 So per 16B line, you pay one line fill, then get cheap hits.
 
 When using no write allocate (NWA), the cache does not load the line on a write miss. Instead, it
-writes the data directly to memory. Therefore, this will yield to a different cost per write in the
-case of the above mentioned for loop.
+writes the data directly to memory. Therefore, this will yield to different cost per write in the
+case of the above-mentioned for loop.
 
 First store to $D+0$:
 \begin{itemize}
@@ -2171,6 +2160,8 @@ Next store to $D+4$:
     \label{fig:write-allocate-2}
 \end{figure}
 
+\newpage
+
 In the next figure the NWA policy is illustrated. As it can be seen no stack addresses appear, even if
 the same instructions are executed. This is because the cache is not loading the line on a write miss,
 but instead writing directly to memory.
@@ -2181,7 +2172,6 @@ but instead writing directly to memory.
     \caption{NWA: no stack addresses appear, all writes are cache miss}
     \label{fig:no-write-allocate}
 \end{figure}
-
 
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SECTION BIBLIOGRAPHY
