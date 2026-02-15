@@ -1794,7 +1794,7 @@ Based on this reasoning, the following configuration is proposed:
 
 This configuration allows the entire instruction sequence to be stored in a single cache block, ensuring that after the first miss, all instructions remain accessible without additional compulsory misses.
 
-The resulting total cache size for this configuration is 4121 bits.
+The resulting total cache size for this configuration is 4120 bits.
 
 \begin{table}[H]
 \centering
@@ -1808,7 +1808,7 @@ The resulting total cache size for this configuration is 4121 bits.
 Lines & $2^{0} = 1$ \\
 Ways & $2^{0} = 1$ \\
 Blocks (Block Size) & $2^{7} = 128$ \\
-Total Size (bits) & 4121 \\
+Total Size (bits) & 4120 \\
 Cache Hits & 42770 \\
 Cache Misses & 1 \\
 \hline
@@ -1869,7 +1869,7 @@ After these initial compulsory misses, additional misses may occur due to capaci
 Lines & $2^{0} = 1$ \\
 Ways & $2^{1} = 2$ \\
 Blocks (Block Size) & $2^{7} = 128$ \\
-Total Size (bits) & 8244 \\
+Total Size (bits) & 8242 \\
 Cache Hits & 10498 \\
 Cache Misses & 3 \\
 \hline
@@ -1907,7 +1907,7 @@ The resulting configuration and performance metrics are summarized in Table~\ref
 Lines & $2^{0} = 1$ \\
 Ways & $2^{1} = 2$ \\
 Blocks (Block Size) & $2^{8} = 256$ \\
-Total Size (bits) & 16434 \\
+Total Size (bits) & 16432 \\
 Cache Hits & 10499 \\
 Cache Misses & 2 \\
 \hline
@@ -1952,7 +1952,7 @@ Two instruction cache configurations were evaluated in order to determine the mo
 Lines & $2^{0} = 1$ & $2^{1} = 2$ \\
 Ways & $2^{0} = 1$ & $2^{1} = 2$ \\
 Blocks (Block Size) & $2^{7} = 128$ & $2^{4} = 16$ \\
-Size (bits) & 4121 & 2160 \\
+Size (bits) & 4120 & 2156 \\
 Total Accesses ($A$) & 42771 & 42771 \\
 Misses ($M$) & 1 & 6 \\
 Miss Rate ($r = M/A$) & $2.34 \times 10^{-5}$ & $1.40 \times 10^{-4}$ \\
@@ -1988,11 +1988,11 @@ Two data cache configurations were evaluated using the proposed efficiency metri
 Lines & $2^{0} = 1$ & $2^{0} = 1$ \\
 Ways & $2^{1} = 2$ & $2^{1} = 2$ \\
 Blocks (Block Size) & $2^{7} = 128$ & $2^{8} = 256$ \\
-Size (bits) & 8244 & 16343 \\
+Size (bits) & 8242 & 16432 \\
 Total Accesses ($A$) & 10501 & 10501 \\
 Misses ($M$) & 3 & 2 \\
 Miss Rate ($r = M/A$) & $2.86 \times 10^{-4}$ & $1.90 \times 10^{-4}$ \\
-Efficiency Metric ($E = r \cdot S$) & 2.35 & 3.11 \\
+Efficiency Metric ($E = r \cdot S$) & 2.35 & 3.12 \\
 \hline
 \end{tabular}
 \caption{Data Cache Configuration and Efficiency Comparison}
@@ -2010,6 +2010,77 @@ In this subsection we are focusing in on illustrating different scenarios of cac
 capacity and conflict) using the \textbf{Ripes} simulator. Compulsory misses are the type of cache miss
 which occurs when a block of data is accessed for the first time and has never been loaded into the cache.
 This kind of miss is unavoidable and occurs in any configuration of cache.
+
+\subsection{Data Access Patterns and Cache Policies}
+
+
+During the execution of the program, the cache was configured with the following policies:
+
+\begin{itemize}
+
+    \item \textbf{Write-through:} Every write operation updates both the cache and the main memory simultaneously. This guarantees memory consistency but increases memory traffic due to frequent write operations.
+
+    \item \textbf{Write-allocate:} On a write miss, the corresponding memory block is first fetched into the cache and then updated.
+
+    \item \textbf{Least Recently Used (LRU):} When a cache set is full, the block that has not been accessed for the longest time is selected for replacement.
+\end{itemize}
+
+
+The following data access patterns were observed during program execution:
+
+\begin{itemize}
+
+    \item \textbf{Spatial Locality:} This behavior is evident in the sequential access to contiguous memory locations in both arrays (\texttt{input} and \texttt{buf}). Since all elements are visited and accessed in order, consecutive memory addresses are used within short time intervals. This favors the cache mechanism, as entire blocks are fetched and multiple useful data elements are brought into the cache with each memory transfer.
+    \item \textbf{Temporal Locality:} Memory locations that are accessed are likely to be reused in the near future. This behavior is particularly evident during the sorting phase of the \texttt{buf} array, where elements may be accessed multiple times across different iterations in order to reorder them. As a result, recently used data has a higher probability of being accessed again, which benefits cache performance.
+  \item \textbf{Working Set:} As previously established, the working set of the program can be approximated by the expression $2N + 7$, where $N$ represents the length of each array (since both \texttt{input} and \texttt{buf} have the same size), and the additional 7 memory locations correspond to stack accesses during the function prologue and epilogue.
+
+    This metric is useful to estimate whether the active memory footprint of the program fits within the cache capacity. If the cache size is sufficient to accommodate the working set, capacity and conflict misses can be significantly reduced. However, if the working set exceeds the available cache space, capacity misses become unavoidable.
+\end{itemize}
+
+
+\subsubsection*{Evaluation of Cache Policies with Respect to Access Patterns}
+
+The observed data access patterns partially align with the selected cache policies, as evidenced by the following aspects:
+
+\begin{itemize}
+
+    \item \textbf{Spatial Locality:} The sequential traversal of the \texttt{input} and \texttt{buf} arrays matches well with the cache architecture. Since consecutive memory locations are accessed within short intervals, fetching entire blocks allows multiple useful data elements to be loaded with a single memory transfer, reducing compulsory misses.
+
+    \item \textbf{Temporal Locality and LRU:} Temporal locality is present during the sorting phase of the \texttt{buf} array, where elements are accessed multiple times across different iterations. In this context, the LRU replacement policy is well suited, as it retains recently used blocks that are likely to be accessed again.
+
+    \item \textbf{Write-Allocate Policy:} The write-allocate policy is well aligned with the sorting behavior. Since modified elements are reused, fetching a block on a write miss is beneficial and reduces future misses. This allows subsequent accesses to be served directly from the cache.
+
+    \item \textbf{Write-Through Policy:} The write-through policy may not be fully optimal for this workload. Because every write operation is immediately propagated to main memory, memory traffic increases significantly during intensive write phases such as array copying and sorting. In contrast, a write-back policy would defer memory updates until the modified block is evicted from the cache, thereby reducing memory traffic. In this scenario, memory updates would likely occur after the sorting phase, once the processed blocks are no longer actively reused.
+
+
+\end{itemize}
+
+Overall, while the cache configuration benefits from spatial and temporal locality through block-based transfers and LRU replacement, the write-through policy may introduce additional memory traffic compared to a write-back configuration.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 \begin{figure}[h]
