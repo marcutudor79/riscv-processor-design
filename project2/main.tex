@@ -142,12 +142,45 @@ One case is the loop control pair \texttt{addi x15, x15, 4} followed by \texttt{
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_addi_bne_cycles42_49.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_addi_bne_cycles42_49.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Forwarding proof. Save your crop as \texttt{img/crop\_addi\_bne\_cycles42\_49.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.2cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    % Cycle numbers
+    \foreach \i in {42,...,49} {
+        \node[cycle] at (0.3 + 1.0*\i - 41.0, 1.6) {C\i};
     }
-    \caption{Forwarding proof (ALU result used before \textbf{WB}). \texttt{addi x15, x15, 4} reaches \textbf{EX} at cycle 45 and writes back at \textbf{WB} at cycle 47, while the following \texttt{bne x15, x12, -16} reaches \textbf{EX} at cycle 46. The branch therefore uses the updated \texttt{x15} one cycle before it is written back, implying a forwarding path into \textbf{EX}.}
+
+    % Instruction labels
+    \node[instruction, anchor=east, fill=cyan!10] at (0, 1.0) {addi x15,x15,4};
+    \node[instruction, anchor=east, fill=yellow!10] at (0, 0.2) {addi x14,x14,4};
+    \node[instruction, anchor=east, fill=red!10] at (0, -0.6) {bne x15,x12,-16};
+
+    % Timelines (matches the cycle discussion in text)
+    % addi x15,x15,4 (includes one bubble as in the screenshot)
+    \foreach \i/\stage in {42/IF, 43/-, 44/ID, 45/EX, 46/ME, 47/WB} {
+        \node[draw, fill=cyan!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 41.0, 1.0) {\tiny\stage};
+    }
+
+    % addi x14,x14,4
+    \foreach \i/\stage in {44/IF, 45/ID, 46/EX, 47/ME, 48/WB} {
+        \node[draw, fill=yellow!30, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 41.0, 0.2) {\tiny\stage};
+    }
+
+    % bne x15,x12,-16
+    \foreach \i/\stage in {45/IF, 46/ID, 47/EX, 48/ME, 49/WB} {
+        \node[draw, fill=red!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 41.0, -0.6) {\tiny\stage};
+    }
+
+    % Legend (same look/placement style as later figures)
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -1.35) {\textbf{Legend:}};
+    \node[draw, fill=red!20, minimum width=0.7cm, minimum height=0.35cm, anchor=west] at (-1.3, -1.65) {};
+    \node[font=\scriptsize, anchor=west] at (-0.35, -1.65) {Branch instruction};
+    \node[font=\scriptsize, anchor=west] at (2.8, -1.65) {- = Pipeline stall};
+    \end{tikzpicture}
+    \caption{Forwarding into \textbf{EX}: \texttt{bne x15, x12, -16} uses the updated \texttt{x15} before \texttt{addi x15, x15, 4} reaches \textbf{WB}.}
     \label{fig:forwarding_alu_branch}
 \end{figure}
 
@@ -156,12 +189,30 @@ Not all RAW hazards are eliminated. The classic special case is when an instruct
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_lw_sw_cycles40_48.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_lw_sw_cycles40_48.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Load\textendash use stall. Save your crop as \texttt{img/crop\_lw\_sw\_cycles40\_48.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.2cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    \foreach \i in {40,...,48} {
+        \node[cycle] at (0.3 + 1.0*\i - 39.0, 1.6) {C\i};
     }
-    \caption{Load\textendash use stall. \texttt{lw x13, 0(x15)} runs IF40\textendash ID41\textendash EX42\textendash MEM43\textendash WB44, while the following \texttt{sw x13, 0(x14)} inserts a one\textendash cycle bubble (\texttt{-}) at cycle 43 before continuing to EX44\textendash MEM45\textendash WB46.}
+
+    \node[instruction, anchor=east, fill=blue!10] at (0, 1.0) {lw x13,0(x15)};
+    \node[instruction, anchor=east, fill=green!10] at (0, 0.2) {sw x13,0(x14)};
+
+    \foreach \i/\stage in {40/IF, 41/ID, 42/EX, 43/ME, 44/WB} {
+        \node[draw, fill=blue!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 39.0, 1.0) {\tiny\stage};
+    }
+    \foreach \i/\stage in {41/IF, 42/ID, 43/-, 44/EX, 45/ME, 46/WB} {
+        \node[draw, fill=green!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 39.0, 0.2) {\tiny\stage};
+    }
+
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -0.55) {\textbf{Legend:}};
+    \node[font=\scriptsize, anchor=west] at (-1.3, -0.85) {- = Pipeline stall (load\textendash use)};
+    \end{tikzpicture}
+    \caption{Load\textendash use hazard: one\textendash cycle bubble between \texttt{lw x13, 0(x15)} and \texttt{sw x13, 0(x14)}.}
     \label{fig:load_use_stall}
 \end{figure}
 
@@ -170,12 +221,36 @@ The loop branch \texttt{bne x15, x12, -16} introduces a control hazard. In a sim
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_branch_flash_cycles45_52.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_branch_flash_cycles45_52.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Control hazard flushing. Save your crop as \texttt{img/crop\_branch\_flash\_cycles45\_52.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.6cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    \foreach \i in {45,...,52} {
+        \node[cycle] at (0.3 + 1.0*\i - 44.0, 1.6) {C\i};
     }
-    \caption{Control hazard and flushing after a taken branch. After \texttt{bne x15, x12, -16} enters the pipeline, the following fall\textendash through instruction (e.g., \texttt{addi x9, x0, 0}) is observed only in \textbf{IF}/\textbf{ID} and does not advance to \textbf{EX/MEM/WB} in the shown cycle window, which is consistent with being flushed after the branch outcome redirects the PC.}
+
+    \node[instruction, anchor=east, fill=red!10] at (0, 1.0) {bne x15,x12,-16};
+    \node[instruction, anchor=east, fill=gray!15] at (0, 0.2) {addi x9,x0,0};
+
+    \foreach \i/\stage in {45/IF, 46/ID, 47/EX, 48/ME, 49/WB} {
+        \node[draw, fill=red!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 44.0, 1.0) {\tiny\stage};
+    }
+
+    % Fall-through instruction appears only in early stages and is flushed
+    \foreach \i/\stage in {46/IF, 47/ID} {
+        \node[draw, fill=gray!30, minimum width=0.8cm, minimum height=0.55cm, opacity=0.6] at (0.3 + 1.0*\i - 44.0, 0.2) {\tiny\stage};
+    }
+    \node[font=\scriptsize\color{red}, anchor=west] at (0.3 + 1.0*48 - 44.0, 0.2) {\textbf{Flushed}};
+
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -0.55) {\textbf{Legend:}};
+    \node[draw, fill=red!20, minimum width=0.7cm, minimum height=0.35cm, anchor=west] at (-1.3, -0.85) {};
+    \node[font=\scriptsize, anchor=west] at (-0.35, -0.85) {Branch instruction};
+    \node[draw, fill=gray!30, minimum width=0.7cm, minimum height=0.35cm, opacity=0.6, anchor=west] at (2.7, -0.85) {};
+    \node[font=\scriptsize, anchor=west] at (3.6, -0.85) {Flushed instruction};
+    \end{tikzpicture}
+    \caption{Taken\textendash branch control hazard: fall\textendash through instruction is fetched but flushed after \texttt{bne x15, x12, -16} redirects the PC.}
     \label{fig:control_hazard}
 \end{figure}
 
@@ -200,23 +275,35 @@ The \texttt{ecall} row may show extra delay cycles (\texttt{-}) before completin
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_ecall_early.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_ecall_early.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: early trace showing the exit sequence. Save your screenshot as \texttt{img/crop\_ecall\_early.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.6cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    \foreach \i in {0,...,4} {
+        \node[cycle] at (0.3 + 1.0*\i, 1.6) {C\i};
     }
-    \caption{Exit sequence visible in an early trace window: \texttt{addi x17, x0, 10} followed by \texttt{ecall}. The \texttt{addi} sets the environment\textendash call selector register (\texttt{a7/x17}) before the terminating \texttt{ecall} is issued.}
+
+    \node[instruction, anchor=east, fill=cyan!10] at (0, 1.0) {addi x17,x0,10};
+    \node[instruction, anchor=east, fill=gray!15] at (0, 0.2) {ecall};
+
+    % Early trace window (as in screenshot): addi visible at IF then ID; ecall just fetched
+    \foreach \i/\stage in {3/IF, 4/ID} {
+        \node[draw, fill=cyan!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i, 1.0) {\tiny\stage};
+    }
+    \foreach \i/\stage in {4/IF} {
+        \node[draw, fill=gray!25, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i, 0.2) {\tiny\stage};
+    }
+    \end{tikzpicture}
+    \caption{Early exit sequence in the trace: \texttt{addi x17, x0, 10} then \texttt{ecall}.}
     \label{fig:ecall_early}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_ecall_end.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_ecall_end.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: final trace showing termination at the end of execution. Save your screenshot as \texttt{img/crop\_ecall\_end.png}.}}%
-    }
-    \caption{End of execution: the final \texttt{addi x17, x0, 10} and \texttt{ecall} sequence appears in the pipeline trace. After \texttt{ecall} is executed, Ripes halts the simulation and reports program completion.}
+    \includegraphics[width=\linewidth]{img/crop_ecall_end.png}
+    \caption{End of execution: final \texttt{addi x17, x0, 10} and \texttt{ecall} in the trace (simulation halts after \texttt{ecall}).}
     \label{fig:ecall_end}
 \end{figure}
 
