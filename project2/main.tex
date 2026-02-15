@@ -34,7 +34,7 @@
 \setcounter{tocdepth}{3}
 
 \lstdefinestyle{mystyle}{
-    backgroundcolor=\color{cyan!20},
+    backgroundcolor=\color{blue!10},
     basicstyle=\ttfamily\color{black}\footnotesize,
     commentstyle=\color{gray}\itshape,
     keywordstyle=\color{blue!80!black}\bfseries,
@@ -120,11 +120,11 @@
 
 \section{Introduction}
 
-This is the second project report for the course Execution Platforms, in which we explore the RISC-V
-architecture and its toolchain. The report is divided into four sections: the first introduces the RISC-V tools,
-the second explains the basics of simple pipelining, the third examines the impact of hazards in both
-simple and dual-issue pipelines and the final section discusses cache memory, including key design
-principles and trade-offs.
+In this report, we present a detailed analysis of a RISC-V program using the RISC-V toolchain and the Ripes simulator. The objective of this practical work is to analyze processor architecture mechanisms, including compilation, instruction-level execution, pipelining, branch handling, multiple-issue execution, and cache behavior.
+
+Our study is based on the compilation and simulation of a C program implementing the insertion sort algorithm, targeting the RISC-V architecture. Through static analysis (inspection of assembly code and symbols) and dynamic simulation (pipeline visualization and cache configuration), we examine how architectural components influence execution flow and performance.
+
+Particular attention is given to performance metrics such as CPI (Cycles Per Instruction), IPC (Instructions Per Cycle), hazard handling mechanisms, and memory hierarchy efficiency.
 
 \section{RISC-V Tool Chain}
 
@@ -150,7 +150,7 @@ program to run correctly.
 \texttt{-nostdlib} &
 Prevents the linker from using the standard system libraries and startup files.
 The C standard library (e.g., libc) is not linked automatically.
- \\ \hline
+ \\ 
 
 \texttt{-nostartfiles} &
 Prevents the inclusion of standard startup files such as crt0.o,
@@ -496,7 +496,7 @@ address of the \texttt{input} array as well as the address of the \texttt{buf} a
 \rowcolor{blue!20}
 \textbf{Array} & \textbf{Memory Address} \\ \hline
 
-\texttt{buf} & \texttt{0x7ffffe34} \\ \hline
+\texttt{buf} & \texttt{0x7ffffe34} \\
 \texttt{input} & \texttt{0x000111a4} \\ \hline
 
 \end{tabular}
@@ -533,10 +533,10 @@ Upon completion of the program execution, the following performance statistics w
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{Value} \\ \hline
 
-Cycles & 58998 \\ \hline
-Instructions retired & 42770 \\ \hline
-CPI & 1.38 \\ \hline
-IPC & 0.725 \\ \hline
+Cycles & 58998 \\ 
+Instructions retired & 42770 \\ 
+CPI & 1.38 \\ 
+IPC & 0.725 \\ 
 Clock rate & 13.27 KHz \\ \hline
 
 \end{tabular}
@@ -553,10 +553,10 @@ When switching to the single cycle processor, the program has the following stat
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{Value} \\ \hline
 
-Cycles & 42770 \\ \hline
-Instructions retired & 42770 \\ \hline
-CPI & 1 \\ \hline
-IPC & 1 \\ \hline
+Cycles & 42770 \\ 
+Instructions retired & 42770 \\ 
+CPI & 1 \\ 
+IPC & 1 \\ 
 Clock rate & 44.84 KHz \\ \hline
 
 \end{tabular}
@@ -773,9 +773,65 @@ The \texttt{ecall} row may show extra delay cycles (\texttt{-}) before completin
 
 \begin{figure}[H]
     \centering
-    \includegraphics[width=\linewidth]{img/crop_ecall_end.png}
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.2cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+
+    % Cycle numbers: C58990 through C58998 (9 cycles)
+    \foreach \i [count=\ci from 1] in {58990,58991,58992,58993,58994,58995,58996,58997} {
+        \node[cycle] at (0.3 + 1.3*\ci, 1.6) {C\i};
+    }
+
+    % Instruction labels (anchor=east, left of diagram)
+    \node[instruction, anchor=east, fill=blue!10]   at (0, 1.0)  {addi x17, x0, 10};
+    \node[instruction, anchor=east, fill=green!10] at (0, 0.2)  {ecall};
+    \node[instruction, anchor=east, fill=cyan!10]    at (0, -0.6) {lw x1, 12(x2)};
+    \node[instruction, anchor=east, fill=yellow!10]  at (0, -1.4) {addi x2, x2, 16};
+
+    % --------------------------------------------------
+    % addi x17, x0, 10
+    % C58990=IF(1), C58991=ID(2), C58992=EX(3), C58993=MEM(4), C58994=WB(5)
+    \foreach \ci/\stage in {1/IF, 2/ID, 3/EX, 4/MEM, 5/WB} {
+        \node[draw, fill=blue!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, 1.0) {\tiny\stage};
+    }
+
+    % --------------------------------------------------
+    % ecall
+    % C58991=IF(2), C58992=ID(3), C58993=EX(4), C58994=-(5), C58995=-(6), C58996=MEM(7), C58997=WB(8)
+    \foreach \ci/\stage in {2/IF, 3/ID, 4/EX, 5/{-}, 6/{-}, 7/MEM, 8/WB} {
+        \node[draw, fill=green!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, 0.2) {\tiny\stage};
+    }
+
+    % --------------------------------------------------
+    % lw x1, 12(x2)
+    % C58992=IF(3), C58993=ID(4), C58994=-(5)
+    \foreach \ci/\stage in {3/IF, 4/ID, 5/{-}} {
+        \node[draw, fill=cyan!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, -0.6) {\tiny\stage};
+    }
+
+    % --------------------------------------------------
+    % addi x2, x2, 16
+    % C58993=IF(4), C58994=-(5)
+    \foreach \ci/\stage in {4/IF, 5/{-}} {
+        \node[draw, fill=yellow!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, -1.4) {\tiny\stage};
+    }
+
+    % Legend
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -2.2) {\textbf{Legend:}};
+    \node[draw, fill=green!20, minimum width=0.7cm, minimum height=0.35cm, anchor=west] at (-1.3, -2.55) {};
+    \node[font=\scriptsize, anchor=west] at (-0.35, -2.55) {ecall (syscall)};
+    \node[font=\scriptsize, anchor=west] at (2.8, -2.55) {- = Pipeline stall};
+
+    \end{tikzpicture}
     \caption{End of execution: final \texttt{addi x17, x0, 10} and \texttt{ecall} in the trace (simulation halts after \texttt{ecall}).}
-    \label{fig:ecall_end}
+    \label{fig:ecall_pipeline}
 \end{figure}
 
 \section{Branches and Multiple-Issue}
@@ -1433,13 +1489,14 @@ It is also important to note that the branch penalty increases from 2 cycles to 
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
 \begin{tabular}{|p{0.2\textwidth}|p{0.2\textwidth}|p{0.2\textwidth}|p{0.2\textwidth}|}
 \hline
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{5-Stage} & \textbf{6-Stage Dual-Issue} & \textbf{Improvement} \\
 \hline
 Theoretical CPI & 1.0 & 0.5 & -2.0\% \\
-Achieved CPI & 1.38 & 1.26 & -1.09\% \\
+Achieved CPI & 1.38 & 1.26 & -1.09\% \\ 
 Branch Penalty & 2 cycles & 3 cycles & +1.5\% \\
 \hline
 \end{tabular}
@@ -1545,7 +1602,7 @@ Next store to $D+4$:
     \centering
     \includegraphics[width=0.9\linewidth]{img/write-allocate-2.png}
     \caption{WA: stack addresses appear, block 0 miss, compulsory}
-    \label{fig:write-allocate}
+    \label{fig:write-allocate-2}
 \end{figure}
 
 In the next figure the NWA policy is illustrated. As it can be seen no stack addresses appear, even if
@@ -1556,7 +1613,7 @@ but instead writing directly to memory.
     \centering
     \includegraphics[width=0.9\linewidth]{img/no-write-allocate.png}
     \caption{NWA: no stack addresses appear, all writes are cache miss}
-    \label{fig:write-allocate}
+    \label{fig:no-write-allocate}
 \end{figure}
 
 
@@ -1565,8 +1622,10 @@ but instead writing directly to memory.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SECTION BIBLIOGRAPHY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
 
 \newpage % keep bibliography on a new page
+
 \bibliographystyle{plain}   % choose a style
 \bibliography{ref}      % name of .bib file (no .bib extension)
 
