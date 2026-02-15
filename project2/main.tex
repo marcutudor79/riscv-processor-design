@@ -118,117 +118,24 @@
 
 \clearpage
 
-\section{Setup}
+\section{Introduction}
 
-\subsection{Files}
-
-For the following exercises you will need to download an archive from Moodle containing configuration, as well as make and source files for the exercises. After extracting the archive, you
-should find the following files in the PR2 directory:
-
-\begin{lstlisting}[style=asmstyle]
-brandner@kairon:~/PR2> find . -type f ./insertion-sort.c ./Makefile
-\end{lstlisting}
-
-\begin{itemize}
-  \item insertion-sort.c
-C source code of the program that should be analyzed in the exercises. The source code
-is compiled, using the RISC-V C compiler, into a binary program (insertion-sort.bin)
-suitable for simulation by the Ripes simulator.
- \end{itemize}
-
-\begin{lstlisting}[style=asmstyle]
-#define SIZE 99
-
-int input[] = {60, 41, 46, 50, 44, 3, 84, 80, 55, 57, 91, 22, 21, 12, 64, 59, 71, 34, 81, 77, 69, 95, 2, 24, 61, 73, 25, 19, 29, 91, 45, 53, 39, 15, 47, 58, 3, 62, 81, 0, 33, 83, 12, 64, 75, 59, 32, 68, 98, 68, 53, 74, 88, 30, 65, 23, 97, 66, 49, 46, 18, 22, 0, 30, 3, 33, 13, 33, 31, 61, 14, 87, 57, 95, 20, 92, 67, 71, 42, 52, 18, 98, 2, 93, 95, 69, 90, 8, 97, 46, 26, 68, 69, 84, 73, 35, 44, 88, 79, 65};
-
-int minIndex(int *array, int n)
-{
-	int i,minIdx = 0;
-	for(i = 0; i < n; i++)
-	{
-		if (array[i] < array[minIdx])
-		{
-			minIdx = i;
-		}
-	}
-
-	return minIdx;
-}
-
-int main()
-{
- 	int buf[SIZE];
-	int i;
-
-	for(i = 0; i < SIZE; i++)
-	{
-		buf[i] = input[i];
-	}
-
-	for(i = 0; i < SIZE-1; i++)
-	{
-		int minIdx = i + minIndex(&buf[i], SIZE - i);
-		int tmp = buf[minIdx];
-		buf[minIdx] = buf[i];
-		buf[i] = tmp;
-	}
-
-	return buf[0];
-}
-
-int _start()
-{
-  int x = main();
-  asm volatile ("li a7, 10; ecall"); // exit system call
-  return x;
-}
-\end{lstlisting}
-
-\begin{itemize}
-\item Makefile to compile insertion-sort.c.
- \end{itemize}
-
-To get started, simply launch a terminal, go into the directory containing the Makefile, and
-type make (or make all).
-
-
-\begin{lstlisting}
-CC:=riscv64-elf-gcc
-3//OBJDUMP:=/comelec/softs/bin/riscv64-unknown-elf-gcc-objdump
-
-CFLAGS:=-O -g -fno-pic -fno-inline -mcmodel=medlow -mabi=ilp32 -march=rv32im -Wall -static -nostdinc -nostartfiles -nodefaultlibs -nostdlib
-
-.PHONY: all clean
-
-all: insertion-sort.elf
-
-insertion-sort.elf: insertion-sort.c
-	$(CC) $(CFLAGS) -o $@ $<
-
-clean:
-	rm -f insertion-sort.elf
-\end{lstlisting}
-
-\subsection{Using Ripes}
-
-Ripes provides a graphical user interface, which visualizes the execution of the program (similar to pipeline drawings and pipeline diagrams that we saw in the lecture), allows singlestepping (i.e., simulating the program cycle-by-cycle), and allows to inspect the register and
-memory values.
-
-
+This is the second project report for the course Execution Platforms, in which we explore the RISC-V
+architecture and its toolchain. The report is divided into four sections: the first introduces the RISC-V tools,
+the second explains the basics of simple pipelining, the third examines the impact of hazards in both
+simple and dual-issue pipelines and the final section discusses cache memory, including key design
+principles and trade-offs.
 
 \section{RISC-V Tool Chain}
 
 \subsection{RISC-V Tools}
 
-
-\begin{itemize}
-  \item  Compile insertion-sort.c using make and check which commands are executed.
-\end{itemize}
-
-
-\begin{itemize}
-  \item Explain what the compiler options -nostdlib and -nostartfiles do.
-\end{itemize}
+When compiling the C code of code insertion-sort.c, multiple flags are used to control the behavior
+of the compiler and linker. The most remarkable ones are \texttt{-nostdlib} and \texttt{-nostartfiles},
+which prevent the inclusion of standard libraries and startup files, respectively. This means that the
+resulting binary will not include the usual C runtime initialization code, and the programmer must
+manually define the entry point (e.g., \texttt{\_start}) and handle any necessary setup for the
+program to run correctly.
 
 
 \begin{table}[H]
@@ -255,14 +162,7 @@ the entry symbol (for example, \texttt{\_start}). \\ \hline
 \caption{Explanation of \texttt{-nostdlib} and \texttt{-nostartfiles} compiler options}
 \end{table}
 
-
-\begin{itemize}
-  \item Look at the assembly code of the resulting ELF binary using the following command:
-riscv64-linux-gnu-objdump -d bin/insertion-sort.elf
-\end{itemize}
-
-The following assembly code was obtained from the compiled binary using the \texttt{objdump} tool:
-
+The following assembly code was obtained from the compiled binary using the \texttt{riscv64-unknown-elf-gcc-objdump} tool:
 
 
 \begin{lstlisting}
@@ -346,15 +246,10 @@ Disassembly of section .text:
    101a0:	00008067          	ret
 \end{lstlisting}
 
-\begin{itemize}
-  \item Look at the assembly code of the ELF binary using the command:
+Looking at the assembly code of the ELF binary using the command:
 riscv64-linux-gnu-objdump -S bin/insertion-sort.elf, which in addition
-to the assembly code also shows the original C code. Find the assembly code corresponding to the first for-loop in function main. At which address range is the code?
-Briefly explain what the instructions of that loop do.
-\end{itemize}
-
-
-Using the indicated command, the following code is obtained:
+to the assembly code also shows the original C code, one can find the code corresponding to the first for-loop
+in function main.
 
 \begin{lstlisting}
   insertion-sort.elf:     file format elf32-littleriscv
@@ -490,24 +385,23 @@ int _start()
 
 \end{lstlisting}
 
-The assembly code corresponding to the first for loop in the main function is located in the address range 0x1010c to 0x1011c. The loop begins at address 0x1010c, where the instruction lw a3, 0(a5) loads a 32-bit word from the memory address pointed to by register a5 (which holds the base address of the input array). The following instruction, sw a3, 0(a4), stores that value into the memory address pointed to by register a4 (which corresponds to the buf array).
+The assembly code corresponding to the first for loop in the main function is located in the address
+range 0x1010c to 0x1011c. The loop begins at address 0x1010c, where the instruction lw a3, 0(a5) loads a
+32-bit word from the memory address pointed to by register a5 (which holds the base address of the input array).
+The following instruction, sw a3, 0(a4), stores that value into the memory address pointed to by register a4
+(which corresponds to the buf array).
 
-After copying one element, the instructions add a5, a5, 4 and add a4, a4, 4 increment the source and destination pointers by 4 bytes, moving to the next array element. Finally, the instruction bne a5, a2, 0x1010c compares the current position of the source pointer with the end address stored in a2. If they are not equal, the execution branches back to 0x1010c, repeating the process. Overall, this loop copies the contents of the input array into the buf array, element by element.
-
-
-\begin{itemize}
-  \item Look at the symbols defined in the ELF binary (functions and global variables) using the
-command:
-
-\begin{lstlisting}
-  riscv64-linux-gnu-objdump -t -j.data -j.text bin/insertion-sort.elf
-\end{lstlisting}
-
-\item  Find the address of symbol input. This symbol represents the variable input from the
-C code.
-\end{itemize}
+After copying one element, the instructions add a5, a5, 4 and add a4, a4, 4 increment the source and
+destination pointers by 4 bytes, moving to the next array element. Finally, the instruction bne a5, a2, 0x1010c
+compares the current position of the source pointer with the end address stored in a2. If they are not equal,
+the execution branches back to 0x1010c, repeating the process. Overall, this loop copies the contents
+of the input array into the buf array, element by element.
 
 The symbol \texttt{input} is located at address \texttt{0x000111a4}, as indicated by the command output.
+This is a relevant information to know in the context of position-independent code (PIC), as it allows us
+to identify how the program accesses global variables and whether it uses absolute or relative addressing.
+In this case, the presence of an absolute address for \texttt{input} suggests that the code is not position-independent,
+as it relies on fixed memory addresses rather than calculating them at runtime based on the program's location in memory.
 
 
 \begin{lstlisting}
@@ -528,15 +422,7 @@ SYMBOL TABLE:
 00010094 g     F .text	0000004c minIndex
 \end{lstlisting}
 
-
-
-\begin{itemize}
-  \item Find an instructions that makes use of the address of input (maybe a memory load-
-/store, or some instruction loading the address into a register). Explain the respective
-instruction/instruction sequences.
-\end{itemize}
-
-The instructions related to input are:
+The instructions related to input address loading are as follows:
 
 \begin{lstlisting}
 100f8: 000117b7    lui a5,0x11
@@ -554,17 +440,12 @@ Once the address is stored in a5, it is used by the following instructions:
 
 The lw instruction loads a 32-bit word from the memory address contained in a5 into register a3. The sw instruction then stores that value into the memory address contained in a4, which corresponds to the buf array.
 
-\begin{itemize}
-  \item Search on the internet what position independent code (PIC) is. Explain in which situations PIC-code might be useful. Explain why PIC-code is essential to many modern
-security mechanisms. Which role does the instruction auipc play on the RISC-V architecture in the context of PIC-code?
-\end{itemize}
-
 \subsubsection*{What is PIC (Position Independent Code)?}
 
 Position-independent code (PIC) is machine code that can execute correctly regardless of the memory address where it is loaded. In other words, it avoids absolute addresses and instead uses PC-relative addressing or indirection tables so it does not need to be rewritten when relocated.
 
 \subsubsection*{When is PIC useful?}
-PIC is especially useful when:
+PIC is especially useful when compiling:
 
 \begin{itemize}
   \item \textbf{Shared libraries (.so / DLL-like)}: The same library code can be mapped into many processes, potentially at different virtual addresses, without needing text relocations.
@@ -581,41 +462,19 @@ ASLR helps to randomize where code (and other segments) are loaded to make explo
 \subsubsection*{What role does auipc play for PIC?}
 The auipc (Add Upper Immediate to PC) instruction is used to generate addresses relative to the current value of the program counter (PC). Instead of relying on absolute memory addresses, auipc computes a partial address by adding a 20-bit immediate value to the current PC and stores the result in a register. This mechanism allows programs to dynamically construct full addresses when combined with other instructions such as addi, jalr, or load/store operations. In general, auipc is fundamental for implementing PC-relative addressing, supporting long-range jumps, accessing global data, and enabling position-independent code (PIC).
 
-
-\begin{itemize}
-  \item Is the compiled binary code position-independent (PIC)? Justify your answer. If yes, indicate and explain instructions sequences that show PIC code. If no, explain the difference
-between the actual binary code in the ELF file and what one would expect from PIC code
-on RISC-V
-\end{itemize}
-
 The compiled binary does not implement position-independent code (PIC). This can be inferred from the absence of the auipc instruction, which is fundamental for generating PC-relative addresses required in PIC execution. Furthermore, this observation is confirmed by inspecting the instructions in the binary, which use absolute target addresses for jumps and branches. For example, the jal instruction at address 0x10134 and the bne instruction that branches to address 0x10160 rely on fixed addresses. This clearly indicates that the binary is not using position-independent code.
 
 
 \subsection{Ripes}
 
-\begin{itemize}
-  \item Read the documentation of the Ripes simulator:
-\begin{lstlisting}
-  https://github.com/mortbopet/Ripes/wiki/Ripes-Introduction
-\end{lstlisting}
-\end{itemize}
-
-
-\begin{itemize}
-  \item Launch Ripes and load the ELF program insertion-sort.elf into the simulator via
-the menu File · Load Program – then follow the instructions of the dialog window.
-\end{itemize}
-
-
-\begin{itemize}
-  \item Go to the memory tab ( on the left) and show that the content of the input array
-within the simulator matches that of the source/ELF file. You can select an address or a
-section under the drop-down-list "Go to section". From there on you may scroll through
-the memory content using your mouse wheel (touch-pad gestures may also work).
-\end{itemize}
-
-
-To find the value, it is necessary to navigate to the .data section, which can be located using the "Go to Section" function. The input array appears as the first value in this section, since it is the only initialized global variable in the program. It can then be verified that the array is stored from lower to higher memory addresses, starting at address 0x000111a4 with the value 60 and ending at address 0x00011330, which stores the final value, 65.
+If one opens Ripes simulator and loads the ELF binary, you can see the memory content of the
+.data and .text sections. To find the values of the input array in the data memory of the RISC-V processor,
+it is necessary to
+navigate to the .data section, which can be located using the "Go to Section" function. The input
+array appears as the first value in this section, since it is the only initialized global variable
+in the program. It can then be verified that the array is stored from lower to higher memory addresses,
+starting at address 0x000111a4 with the value 60 and ending at address 0x00011330, which stores the
+final value, 65.
 
 \begin{figure}[H]
     \centering
@@ -624,18 +483,9 @@ To find the value, it is necessary to navigate to the .data section, which can b
     \label{fig:memoryInput}
 \end{figure}
 
-
-\begin{itemize}
-  \item The values of the array input are copied by the first for-loop of main into another
-array buf, which is stored on the stack. Go to the binary-code tab ( ) find the store
-instruction within this loop and set a breakpoint by clicking in the side-bar on the left of
-the instruction. Run the program up to that breakpoint and determine the address of the
-array buf by examining the register values. The simulator van run either in an interactive
-mode (buttons / , slow) or quickly execute up to the next breakpoint/the program’s
-completion (button , faster).
-\end{itemize}
-
-The code is executed until the \texttt{sw} instruction is reached in order to determine the exact memory location where it is performed. After that, the register values are inspected, confirming the memory address of the \texttt{input} array as well as the address of the \texttt{buf} array.
+The code is executed until the \texttt{sw} instruction is reached in order to determine the exact memory
+location where it is performed. After that, the register values are inspected, confirming the memory
+address of the \texttt{input} array as well as the address of the \texttt{buf} array.
 
 \begin{table}[H]
 \centering
@@ -661,16 +511,8 @@ The code is executed until the \texttt{sw} instruction is reached in order to de
     \label{fig:loadInput}
 \end{figure}
 
-
-
-
-\begin{itemize}
-  \item Open again the memory tab and show that the values of array buf get actually sorted.
-You can even watch memory content while the program executes using the interactive
-mode (see above).
-\end{itemize}
-
-To verify this, a breakpoint was set immediately after the loop. Once execution reached that point, the memory contents were inspected, confirming that the array was correctly copied into the \texttt{buf} array.
+To verify this, a breakpoint was set immediately after the loop. Once execution reached that point,
+the memory contents were inspected, confirming that the array was correctly copied into the \texttt{buf} array.
 
 
 \begin{figure}[H]
@@ -679,19 +521,6 @@ To verify this, a breakpoint was set immediately after the loop. Once execution 
     \caption{Buf In Memory}
     \label{fig:BufInMemory}
 \end{figure}
-
-
-\begin{itemize}
-  \item Open the cache tab and play with different cache options (number of lines \& ways,
-block size). You can zoom into the content of the cache by pressing the Ctrl key and at
-the same time turning your mouse wheel (touch-pad gestures may also work).
-\end{itemize}
-
-
-\begin{itemize}
-  \item Finally go to the processor tab  and summarize the main characteristics when executing the program to completion (number of cycles \& executed instructions, CPI, IPC). Click
-on button on the right of the simulator controls to see a simplified pipeline diagram.
-\end{itemize}
 
 Upon completion of the program execution, the following performance statistics were obtained:
 
@@ -711,30 +540,33 @@ IPC & 0.725 \\ \hline
 Clock rate & 13.27 KHz \\ \hline
 
 \end{tabular}
-\caption{Execution statistics}
+\caption{Program statistics in Ripes after completion on the 5 stage processor}
 \end{table}
 
+When switching to the single cycle processor, the program has the following statistics:
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{6cm}|p{5cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Metric} & \textbf{Value} \\ \hline
 
+Cycles & 42770 \\ \hline
+Instructions retired & 42770 \\ \hline
+CPI & 1 \\ \hline
+IPC & 1 \\ \hline
+Clock rate & 44.84 KHz \\ \hline
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=1\textwidth]{img/ProgramPerfo.png}
-    \caption{Execution statistics}
-    \label{fig:Execution statistics}
-\end{figure}
+\end{tabular}
+\caption{Program statistics in Ripes after completion on the single stage processor}
+\end{table}
 
-
-
-
-
-
-\begin{itemize}
-  \item The simulator allows to use different processor models using the CPU button ( on the
-top next to the simulator control buttons). Select another processor model (32-bit) and
-summarize and compare the characteristics with the numbers that you have obtained
-before.
-\end{itemize}
-
+By comparison with the simple 5 stage processor, the latter obtains a better CPI since
+it executes one instruction per cycle, while the 5 stage processor has a CPI of 1.38 due to pipeline stalls and flushes.
+The retired instructions are the same in both cases, which is expected since the program logic does not change. The total
+cycles are significantly higher in the single in the 5 stage processor due to the overhead of pipelining.
 
 \section{Simple Pipelining}
 \subsection{Setup and initial view}
