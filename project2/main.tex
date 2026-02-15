@@ -34,7 +34,7 @@
 \setcounter{tocdepth}{3}
 
 \lstdefinestyle{mystyle}{
-    backgroundcolor=\color{cyan!20},
+    backgroundcolor=\color{blue!10},
     basicstyle=\ttfamily\color{black}\footnotesize,
     commentstyle=\color{gray}\itshape,
     keywordstyle=\color{blue!80!black}\bfseries,
@@ -105,6 +105,27 @@
   captionpos=b
 }
 
+
+\usepackage{listings}
+\usepackage{xcolor}
+
+\lstset{
+    language=C,
+    basicstyle=\ttfamily\small,
+    keywordstyle=\color{blue},
+    commentstyle=\color{green!60!black},
+    stringstyle=\color{red},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    stepnumber=1,
+    numbersep=5pt,
+    backgroundcolor=\color{gray!10},
+    showstringspaces=false,
+    tabsize=4,
+    breaklines=true
+}
+
+
 % Pipeline diagram colors and macros
 \newcommand{\IF}{\cellcolor{blue!15}IF}
 \newcommand{\ID}{\cellcolor{green!20}ID}
@@ -144,7 +165,457 @@
 
 
 \clearpage
-\setcounter{section}{2}
+
+\section{Introduction}
+
+In this report, we present a detailed analysis of a RISC-V program using the RISC-V toolchain and the Ripes simulator. The objective of this practical work is to analyze processor architecture mechanisms, including compilation, instruction-level execution, pipelining, branch handling, multiple-issue execution, and cache behavior.
+
+Our study is based on the compilation and simulation of a C program implementing the insertion sort algorithm, targeting the RISC-V architecture. Through static analysis (inspection of assembly code and symbols) and dynamic simulation (pipeline visualization and cache configuration), we examine how architectural components influence execution flow and performance.
+
+Particular attention is given to performance metrics such as CPI (Cycles Per Instruction), IPC (Instructions Per Cycle), hazard handling mechanisms, and memory hierarchy efficiency.
+
+\section{RISC-V Tool Chain}
+
+\subsection{RISC-V Tools}
+
+When compiling the C code of code insertion-sort.c, multiple flags are used to control the behavior
+of the compiler and linker. The most remarkable ones are \texttt{-nostdlib} and \texttt{-nostartfiles},
+which prevent the inclusion of standard libraries and startup files, respectively. This means that the
+resulting binary will not include the usual C runtime initialization code, and the programmer must
+manually define the entry point (e.g., \texttt{\_start}) and handle any necessary setup for the
+program to run correctly.
+
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{3cm}|p{10cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Option} & \textbf{Description} \\ \hline
+
+\texttt{-nostdlib} &
+Prevents the linker from using the standard system libraries and startup files.
+The C standard library (e.g., libc) is not linked automatically.
+ \\ 
+
+\texttt{-nostartfiles} &
+Prevents the inclusion of standard startup files such as crt0.o,
+crtbegin.o, and crtend.o. Standard libraries are still linked unless
+\texttt{-nostdlib} is also specified. The programmer must manually define
+the entry symbol (for example, \texttt{\_start}). \\ \hline
+
+\end{tabular}
+\caption{Explanation of \texttt{-nostdlib} and \texttt{-nostartfiles} compiler options}
+\end{table}
+
+The following assembly code was obtained from the compiled binary using the \texttt{riscv64-unknown-elf-gcc-objdump} tool:
+
+
+\begin{lstlisting}
+  insertion-sort.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00010094 <minIndex>:
+   10094:	00050813          	mv	a6,a0
+   10098:	04b05063          	blez	a1,100d8 <minIndex+0x44>
+   1009c:	00050693          	mv	a3,a0
+   100a0:	00000513          	li	a0,0
+   100a4:	00000713          	li	a4,0
+   100a8:	0100006f          	j	100b8 <minIndex+0x24>
+   100ac:	00170713          	addi	a4,a4,1
+   100b0:	00468693          	addi	a3,a3,4
+   100b4:	02e58063          	beq	a1,a4,100d4 <minIndex+0x40>
+   100b8:	00251793          	slli	a5,a0,0x2
+   100bc:	00f807b3          	add	a5,a6,a5
+   100c0:	0006a603          	lw	a2,0(a3)
+   100c4:	0007a783          	lw	a5,0(a5)
+   100c8:	fef652e3          	bge	a2,a5,100ac <minIndex+0x18>
+   100cc:	00070513          	mv	a0,a4
+   100d0:	fddff06f          	j	100ac <minIndex+0x18>
+   100d4:	00008067          	ret
+   100d8:	00000513          	li	a0,0
+   100dc:	00008067          	ret
+
+000100e0 <main>:
+   100e0:	e5010113          	addi	sp,sp,-432
+   100e4:	1a112623          	sw	ra,428(sp)
+   100e8:	1a812423          	sw	s0,424(sp)
+   100ec:	1a912223          	sw	s1,420(sp)
+   100f0:	1b212023          	sw	s2,416(sp)
+   100f4:	19312e23          	sw	s3,412(sp)
+   100f8:	000117b7          	lui	a5,0x11
+   100fc:	1a478793          	addi	a5,a5,420 # 111a4 <input>
+   10100:	00410413          	addi	s0,sp,4
+   10104:	18c78613          	addi	a2,a5,396
+   10108:	00040713          	mv	a4,s0
+   1010c:	0007a683          	lw	a3,0(a5)
+   10110:	00d72023          	sw	a3,0(a4)
+   10114:	00478793          	addi	a5,a5,4
+   10118:	00470713          	addi	a4,a4,4
+   1011c:	fec798e3          	bne	a5,a2,1010c <main+0x2c>
+   10120:	00000493          	li	s1,0
+   10124:	06300993          	li	s3,99
+   10128:	06200913          	li	s2,98
+   1012c:	409985b3          	sub	a1,s3,s1
+   10130:	00040513          	mv	a0,s0
+   10134:	f61ff0ef          	jal	10094 <minIndex>
+   10138:	00950533          	add	a0,a0,s1
+   1013c:	00251513          	slli	a0,a0,0x2
+   10140:	19050793          	addi	a5,a0,400
+   10144:	00278533          	add	a0,a5,sp
+   10148:	e7452783          	lw	a5,-396(a0)
+   1014c:	00042703          	lw	a4,0(s0)
+   10150:	e6e52a23          	sw	a4,-396(a0)
+   10154:	00f42023          	sw	a5,0(s0)
+   10158:	00148493          	addi	s1,s1,1
+   1015c:	00440413          	addi	s0,s0,4
+   10160:	fd2496e3          	bne	s1,s2,1012c <main+0x4c>
+   10164:	00412503          	lw	a0,4(sp)
+   10168:	1ac12083          	lw	ra,428(sp)
+   1016c:	1a812403          	lw	s0,424(sp)
+   10170:	1a412483          	lw	s1,420(sp)
+   10174:	1a012903          	lw	s2,416(sp)
+   10178:	19c12983          	lw	s3,412(sp)
+   1017c:	1b010113          	addi	sp,sp,432
+   10180:	00008067          	ret
+
+00010184 <_start>:
+   10184:	ff010113          	addi	sp,sp,-16
+   10188:	00112623          	sw	ra,12(sp)
+   1018c:	f55ff0ef          	jal	100e0 <main>
+   10190:	00a00893          	li	a7,10
+   10194:	00000073          	ecall
+   10198:	00c12083          	lw	ra,12(sp)
+   1019c:	01010113          	addi	sp,sp,16
+   101a0:	00008067          	ret
+\end{lstlisting}
+
+Looking at the assembly code of the ELF binary using the command:
+riscv64-linux-gnu-objdump -S bin/insertion-sort.elf, which in addition
+to the assembly code also shows the original C code, one can find the code corresponding to the first for-loop
+in function main.
+
+\begin{lstlisting}
+  insertion-sort.elf:     file format elf32-littleriscv
+
+
+Disassembly of section .text:
+
+00010094 <minIndex>:
+#define SIZE 99
+
+int input[] = {60, 41, 46, 50, 44, 3, 84, 80, 55, 57, 91, 22, 21, 12, 64, 59, 71, 34, 81, 77, 69, 95, 2, 24, 61, 73, 25, 19, 29, 91, 45, 53, 39, 15, 47, 58, 3, 62, 81, 0, 33, 83, 12, 64, 75, 59, 32, 68, 98, 68, 53, 74, 88, 30, 65, 23, 97, 66, 49, 46, 18, 22, 0, 30, 3, 33, 13, 33, 31, 61, 14, 87, 57, 95, 20, 92, 67, 71, 42, 52, 18, 98, 2, 93, 95, 69, 90, 8, 97, 46, 26, 68, 69, 84, 73, 35, 44, 88, 79, 65};
+
+int minIndex(int *array, int n)
+{
+   10094:	00050813          	mv	a6,a0
+	int i,minIdx = 0;
+	for(i = 0; i < n; i++)
+   10098:	04b05063          	blez	a1,100d8 <minIndex+0x44>
+   1009c:	00050693          	mv	a3,a0
+	int i,minIdx = 0;
+   100a0:	00000513          	li	a0,0
+	for(i = 0; i < n; i++)
+   100a4:	00000713          	li	a4,0
+   100a8:	0100006f          	j	100b8 <minIndex+0x24>
+   100ac:	00170713          	add	a4,a4,1
+   100b0:	00468693          	add	a3,a3,4
+   100b4:	02e58063          	beq	a1,a4,100d4 <minIndex+0x40>
+	{
+		if (array[i] < array[minIdx])
+   100b8:	00251793          	sll	a5,a0,0x2
+   100bc:	00f807b3          	add	a5,a6,a5
+   100c0:	0006a603          	lw	a2,0(a3)
+   100c4:	0007a783          	lw	a5,0(a5)
+   100c8:	fef652e3          	bge	a2,a5,100ac <minIndex+0x18>
+   100cc:	00070513          	mv	a0,a4
+   100d0:	fddff06f          	j	100ac <minIndex+0x18>
+   100d4:	00008067          	ret
+	int i,minIdx = 0;
+   100d8:	00000513          	li	a0,0
+			minIdx = i;
+		}
+	}
+
+	return minIdx;
+}
+   100dc:	00008067          	ret
+
+000100e0 <main>:
+
+int main()
+{
+   100e0:	e5010113          	add	sp,sp,-432
+   100e4:	1a112623          	sw	ra,428(sp)
+   100e8:	1a812423          	sw	s0,424(sp)
+   100ec:	1a912223          	sw	s1,420(sp)
+   100f0:	1b212023          	sw	s2,416(sp)
+   100f4:	19312e23          	sw	s3,412(sp)
+ 	int buf[SIZE];
+	int i;
+
+	for(i = 0; i < SIZE; i++)
+   100f8:	000117b7          	lui	a5,0x11
+   100fc:	1a478793          	add	a5,a5,420 # 111a4 <input>
+   10100:	00410413          	add	s0,sp,4
+   10104:	18c78613          	add	a2,a5,396
+{
+   10108:	00040713          	mv	a4,s0
+	{
+		buf[i] = input[i];
+   1010c:	0007a683          	lw	a3,0(a5)
+   10110:	00d72023          	sw	a3,0(a4)
+	for(i = 0; i < SIZE; i++)
+   10114:	00478793          	add	a5,a5,4
+   10118:	00470713          	add	a4,a4,4
+   1011c:	fec798e3          	bne	a5,a2,1010c <main+0x2c>
+	}
+
+	for(i = 0; i < SIZE-1; i++)
+   10120:	00000493          	li	s1,0
+	{
+		int minIdx = i + minIndex(&buf[i], SIZE - i);
+   10124:	06300993          	li	s3,99
+	for(i = 0; i < SIZE-1; i++)
+   10128:	06200913          	li	s2,98
+		int minIdx = i + minIndex(&buf[i], SIZE - i);
+   1012c:	409985b3          	sub	a1,s3,s1
+   10130:	00040513          	mv	a0,s0
+   10134:	f61ff0ef          	jal	10094 <minIndex>
+   10138:	00950533          	add	a0,a0,s1
+		int tmp = buf[minIdx];
+   1013c:	00251513          	sll	a0,a0,0x2
+   10140:	19050793          	add	a5,a0,400
+   10144:	00278533          	add	a0,a5,sp
+   10148:	e7452783          	lw	a5,-396(a0)
+		buf[minIdx] = buf[i];
+   1014c:	00042703          	lw	a4,0(s0)
+   10150:	e6e52a23          	sw	a4,-396(a0)
+		buf[i] = tmp;
+   10154:	00f42023          	sw	a5,0(s0)
+	for(i = 0; i < SIZE-1; i++)
+   10158:	00148493          	add	s1,s1,1
+   1015c:	00440413          	add	s0,s0,4
+   10160:	fd2496e3          	bne	s1,s2,1012c <main+0x4c>
+	}
+
+	return buf[0];
+}
+   10164:	00412503          	lw	a0,4(sp)
+   10168:	1ac12083          	lw	ra,428(sp)
+   1016c:	1a812403          	lw	s0,424(sp)
+   10170:	1a412483          	lw	s1,420(sp)
+   10174:	1a012903          	lw	s2,416(sp)
+   10178:	19c12983          	lw	s3,412(sp)
+   1017c:	1b010113          	add	sp,sp,432
+   10180:	00008067          	ret
+
+00010184 <_start>:
+
+int _start()
+{
+   10184:	ff010113          	add	sp,sp,-16
+   10188:	00112623          	sw	ra,12(sp)
+  int x = main();
+   1018c:	f55ff0ef          	jal	100e0 <main>
+  asm volatile ("li a7, 10; ecall"); // exit system call
+   10190:	00a00893          	li	a7,10
+   10194:	00000073          	ecall
+  return x;
+}
+   10198:	00c12083          	lw	ra,12(sp)
+   1019c:	01010113          	add	sp,sp,16
+   101a0:	00008067          	ret
+
+\end{lstlisting}
+
+The assembly code corresponding to the first for loop in the main function is located in the address
+range 0x1010c to 0x1011c. The loop begins at address 0x1010c, where the instruction lw a3, 0(a5) loads a
+32-bit word from the memory address pointed to by register a5 (which holds the base address of the input array).
+The following instruction, sw a3, 0(a4), stores that value into the memory address pointed to by register a4
+(which corresponds to the buf array).
+
+After copying one element, the instructions add a5, a5, 4 and add a4, a4, 4 increment the source and
+destination pointers by 4 bytes, moving to the next array element. Finally, the instruction bne a5, a2, 0x1010c
+compares the current position of the source pointer with the end address stored in a2. If they are not equal,
+the execution branches back to 0x1010c, repeating the process. Overall, this loop copies the contents
+of the input array into the buf array, element by element.
+
+The symbol \texttt{input} is located at address \texttt{0x000111a4}, as indicated by the command output.
+This is a relevant information to know in the context of position-independent code (PIC), as it allows us
+to identify how the program accesses global variables and whether it uses absolute or relative addressing.
+In this case, the presence of an absolute address for \texttt{input} suggests that the code is not position-independent,
+as it relies on fixed memory addresses rather than calculating them at runtime based on the program's location in memory.
+
+
+\begin{lstlisting}
+  insertion-sort.elf:     file format elf32-littleriscv
+
+SYMBOL TABLE:
+00010094 l    d  .text	00000000 .text
+000111a4 l    d  .data	00000000 .data
+00011334 g       .data	00000000 __SDATA_BEGIN__
+000111a4 g     O .data	00000190 input
+00010184 g     F .text	00000020 _start
+00011334 g       .data	00000000 __BSS_END__
+00011334 g       .data	00000000 __bss_start
+000100e0 g     F .text	000000a4 main
+000111a4 g       .data	00000000 __DATA_BEGIN__
+00011334 g       .data	00000000 _edata
+00011334 g       .data	00000000 _end
+00010094 g     F .text	0000004c minIndex
+\end{lstlisting}
+
+The instructions related to input address loading are as follows:
+
+\begin{lstlisting}
+100f8: 000117b7    lui a5,0x11
+100fc: 1a478793    add a5,a5,420  # 111a4 <input>
+\end{lstlisting}
+
+This sequence loads the address of the global symbol input into register a5. The lui instruction loads the upper 20 bits of the address into a5. Then, the add instruction adds the lower offset (420), completing the full 32-bit address 0x000111a4, which corresponds to the location of input.
+
+Once the address is stored in a5, it is used by the following instructions:
+
+\begin{lstlisting}
+  1010c: 0007a683 lw a3,0(a5)
+  10110: 00d72023 sw a3,0(a4)
+\end{lstlisting}
+
+The lw instruction loads a 32-bit word from the memory address contained in a5 into register a3. The sw instruction then stores that value into the memory address contained in a4, which corresponds to the buf array.
+
+\subsubsection*{What is PIC (Position Independent Code)?}
+
+Position-independent code (PIC) is machine code that can execute correctly regardless of the memory address where it is loaded. In other words, it avoids absolute addresses and instead uses PC-relative addressing or indirection tables so it does not need to be rewritten when relocated.
+
+\subsubsection*{When is PIC useful?}
+PIC is especially useful when compiling:
+
+\begin{itemize}
+  \item \textbf{Shared libraries (.so / DLL-like)}: The same library code can be mapped into many processes, potentially at different virtual addresses, without needing text relocations.
+  \item \textbf{Dynamically linked objects}: PIC works with mechanisms like the Global Offset Table (GOT), letting code access external/global symbols through indirection.
+  \item \textbf{Reducing relocation work at load time}: If the loader doesn’t need to patch many absolute addresses, startup can be faster and memory sharing is easier (fewer dirty pages).
+\end{itemize}
+
+
+\subsubsection*{Why is PIC essential for modern security mechanisms?}
+PIC is a key enabler for ASLR (Address Space Layout Randomization) applied to code segments, and the ASLR
+ASLR helps to randomize where code (and other segments) are loaded to make exploits (e.g., ROP) harder.
+
+
+\subsubsection*{What role does auipc play for PIC?}
+The auipc (Add Upper Immediate to PC) instruction is used to generate addresses relative to the current value of the program counter (PC). Instead of relying on absolute memory addresses, auipc computes a partial address by adding a 20-bit immediate value to the current PC and stores the result in a register. This mechanism allows programs to dynamically construct full addresses when combined with other instructions such as addi, jalr, or load/store operations. In general, auipc is fundamental for implementing PC-relative addressing, supporting long-range jumps, accessing global data, and enabling position-independent code (PIC).
+
+The compiled binary does not implement position-independent code (PIC). This can be inferred from the absence of the auipc instruction, which is fundamental for generating PC-relative addresses required in PIC execution. Furthermore, this observation is confirmed by inspecting the instructions in the binary, which use absolute target addresses for jumps and branches. For example, the jal instruction at address 0x10134 and the bne instruction that branches to address 0x10160 rely on fixed addresses. This clearly indicates that the binary is not using position-independent code.
+
+
+\subsection{Ripes}
+
+If one opens Ripes simulator and loads the ELF binary, you can see the memory content of the
+.data and .text sections. To find the values of the input array in the data memory of the RISC-V processor,
+it is necessary to
+navigate to the .data section, which can be located using the "Go to Section" function. The input
+array appears as the first value in this section, since it is the only initialized global variable
+in the program. It can then be verified that the array is stored from lower to higher memory addresses,
+starting at address 0x000111a4 with the value 60 and ending at address 0x00011330, which stores the
+final value, 65.
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{img/memoryInput.png}
+    \caption{Memory input representation}
+    \label{fig:memoryInput}
+\end{figure}
+
+The code is executed until the \texttt{sw} instruction is reached in order to determine the exact memory
+location where it is performed. After that, the register values are inspected, confirming the memory
+address of the \texttt{input} array as well as the address of the \texttt{buf} array.
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{5cm}|p{6cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Array} & \textbf{Memory Address} \\ \hline
+
+\texttt{buf} & \texttt{0x7ffffe34} \\
+\texttt{input} & \texttt{0x000111a4} \\ \hline
+
+\end{tabular}
+\caption{Memory addresses of the \texttt{buf} and \texttt{input} arrays}
+\end{table}
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{img/loadinput.png}
+    \caption{Load Input to Buf}
+    \label{fig:loadInput}
+\end{figure}
+
+To verify this, a breakpoint was set immediately after the loop. Once execution reached that point,
+the memory contents were inspected, confirming that the array was correctly copied into the \texttt{buf} array.
+
+
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=1\textwidth]{img/bufMemory.png}
+    \caption{Buf In Memory}
+    \label{fig:BufInMemory}
+\end{figure}
+
+Upon completion of the program execution, the following performance statistics were obtained:
+
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{6cm}|p{5cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Metric} & \textbf{Value} \\ \hline
+
+Cycles & 58998 \\ 
+Instructions retired & 42770 \\ 
+CPI & 1.38 \\ 
+IPC & 0.725 \\ 
+Clock rate & 13.27 KHz \\ \hline
+
+\end{tabular}
+\caption{Program statistics in Ripes after completion on the 5 stage processor}
+\end{table}
+
+When switching to the single cycle processor, the program has the following statistics:
+\begin{table}[H]
+\centering
+\renewcommand{\arraystretch}{1.6}
+\rowcolors{2}{gray!10}{white}
+\begin{tabular}{|p{6cm}|p{5cm}|}
+\hline
+\rowcolor{blue!20}
+\textbf{Metric} & \textbf{Value} \\ \hline
+
+Cycles & 42770 \\ 
+Instructions retired & 42770 \\ 
+CPI & 1 \\ 
+IPC & 1 \\ 
+Clock rate & 44.84 KHz \\ \hline
+
+\end{tabular}
+\caption{Program statistics in Ripes after completion on the single stage processor}
+\end{table}
+
+By comparison with the simple 5 stage processor, the latter obtains a better CPI since
+it executes one instruction per cycle, while the 5 stage processor has a CPI of 1.38 due to pipeline stalls and flushes.
+The retired instructions are the same in both cases, which is expected since the program logic does not change. The total
+cycles are significantly higher in the single in the 5 stage processor due to the overhead of pipelining.
+
 \section{Simple Pipelining}
 \subsection{Setup and initial view}
 Using the Ripes simulator \cite{ripes_repo}, we first load the insertion\textendash sort ELF built from the source file \texttt{insertion-sort.c} and then select the 5\textendash stage RISC\textendash V CPU via the \emph{CPU} button. After selecting this configuration, the \emph{Processor} tab presents the canonical IF\textendash ID\textendash EX\textendash MEM\textendash WB datapath with explicit pipeline registers (\texttt{IF/ID}, \texttt{ID/EX}, \texttt{EX/MEM}, \texttt{MEM/WB}). The view shows the PC and instruction memory feeding \emph{Decode} and the \emph{Registers} file; operands flow through the immediate generator into the \emph{ALU}, with a \emph{Branch} unit resolving control flow, while the \emph{Data memory} block handles loads/stores before results are written back via the MEM/WB mux to the register file. Forwarding candidates are visually indicated by the multiplexers bridging values from later stages back to EX operands and each pipeline register exposes \emph{enable}/\emph{clear} controls that highlight stalls and flushes when stepping the program. This is the exact structural view shown in Figure~\ref{fig:ripes_5stage} and serves as the baseline for the following questions, where we run approximately 100 cycles of the insertion\textendash sort program and observe pipeline activity.
@@ -190,12 +661,45 @@ One case is the loop control pair \texttt{addi x15, x15, 4} followed by \texttt{
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_addi_bne_cycles42_49.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_addi_bne_cycles42_49.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Forwarding proof. Save your crop as \texttt{img/crop\_addi\_bne\_cycles42\_49.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.2cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    % Cycle numbers
+    \foreach \i in {42,...,49} {
+        \node[cycle] at (0.3 + 1.0*\i - 41.0, 1.6) {C\i};
     }
-    \caption{Forwarding proof (ALU result used before \textbf{WB}). \texttt{addi x15, x15, 4} reaches \textbf{EX} at cycle 45 and writes back at \textbf{WB} at cycle 47, while the following \texttt{bne x15, x12, -16} reaches \textbf{EX} at cycle 46. The branch therefore uses the updated \texttt{x15} one cycle before it is written back, implying a forwarding path into \textbf{EX}.}
+
+    % Instruction labels
+    \node[instruction, anchor=east, fill=cyan!10] at (0, 1.0) {addi x15,x15,4};
+    \node[instruction, anchor=east, fill=yellow!10] at (0, 0.2) {addi x14,x14,4};
+    \node[instruction, anchor=east, fill=red!10] at (0, -0.6) {bne x15,x12,-16};
+
+    % Timelines (matches the cycle discussion in text)
+    % addi x15,x15,4 (includes one bubble as in the screenshot)
+    \foreach \i/\stage in {42/IF, 43/-, 44/ID, 45/EX, 46/ME, 47/WB} {
+        \node[draw, fill=cyan!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 41.0, 1.0) {\tiny\stage};
+    }
+
+    % addi x14,x14,4
+    \foreach \i/\stage in {44/IF, 45/ID, 46/EX, 47/ME, 48/WB} {
+        \node[draw, fill=yellow!30, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 41.0, 0.2) {\tiny\stage};
+    }
+
+    % bne x15,x12,-16
+    \foreach \i/\stage in {45/IF, 46/ID, 47/EX, 48/ME, 49/WB} {
+        \node[draw, fill=red!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 41.0, -0.6) {\tiny\stage};
+    }
+
+    % Legend (same look/placement style as later figures)
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -1.35) {\textbf{Legend:}};
+    \node[draw, fill=red!20, minimum width=0.7cm, minimum height=0.35cm, anchor=west] at (-1.3, -1.65) {};
+    \node[font=\scriptsize, anchor=west] at (-0.35, -1.65) {Branch instruction};
+    \node[font=\scriptsize, anchor=west] at (2.8, -1.65) {- = Pipeline stall};
+    \end{tikzpicture}
+    \caption{Forwarding into \textbf{EX}: \texttt{bne x15, x12, -16} uses the updated \texttt{x15} before \texttt{addi x15, x15, 4} reaches \textbf{WB}.}
     \label{fig:forwarding_alu_branch}
 \end{figure}
 
@@ -204,12 +708,30 @@ Not all RAW hazards are eliminated. The classic special case is when an instruct
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_lw_sw_cycles40_48.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_lw_sw_cycles40_48.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Load\textendash use stall. Save your crop as \texttt{img/crop\_lw\_sw\_cycles40\_48.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.2cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    \foreach \i in {40,...,48} {
+        \node[cycle] at (0.3 + 1.0*\i - 39.0, 1.6) {C\i};
     }
-    \caption{Load\textendash use stall. \texttt{lw x13, 0(x15)} runs IF40\textendash ID41\textendash EX42\textendash MEM43\textendash WB44, while the following \texttt{sw x13, 0(x14)} inserts a one\textendash cycle bubble (\texttt{-}) at cycle 43 before continuing to EX44\textendash MEM45\textendash WB46.}
+
+    \node[instruction, anchor=east, fill=blue!10] at (0, 1.0) {lw x13,0(x15)};
+    \node[instruction, anchor=east, fill=green!10] at (0, 0.2) {sw x13,0(x14)};
+
+    \foreach \i/\stage in {40/IF, 41/ID, 42/EX, 43/ME, 44/WB} {
+        \node[draw, fill=blue!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 39.0, 1.0) {\tiny\stage};
+    }
+    \foreach \i/\stage in {41/IF, 42/ID, 43/-, 44/EX, 45/ME, 46/WB} {
+        \node[draw, fill=green!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 39.0, 0.2) {\tiny\stage};
+    }
+
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -0.55) {\textbf{Legend:}};
+    \node[font=\scriptsize, anchor=west] at (-1.3, -0.85) {- = Pipeline stall (load\textendash use)};
+    \end{tikzpicture}
+    \caption{Load\textendash use hazard: one\textendash cycle bubble between \texttt{lw x13, 0(x15)} and \texttt{sw x13, 0(x14)}.}
     \label{fig:load_use_stall}
 \end{figure}
 
@@ -218,18 +740,42 @@ The loop branch \texttt{bne x15, x12, -16} introduces a control hazard. In a sim
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_branch_flash_cycles45_52.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_branch_flash_cycles45_52.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: Control hazard flushing. Save your crop as \texttt{img/crop\_branch\_flash\_cycles45\_52.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.6cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    \foreach \i in {45,...,52} {
+        \node[cycle] at (0.3 + 1.0*\i - 44.0, 1.6) {C\i};
     }
-    \caption{Control hazard and flushing after a taken branch. After \texttt{bne x15, x12, -16} enters the pipeline, the following fall\textendash through instruction (e.g., \texttt{addi x9, x0, 0}) is observed only in \textbf{IF}/\textbf{ID} and does not advance to \textbf{EX/MEM/WB} in the shown cycle window, which is consistent with being flushed after the branch outcome redirects the PC.}
+
+    \node[instruction, anchor=east, fill=red!10] at (0, 1.0) {bne x15,x12,-16};
+    \node[instruction, anchor=east, fill=gray!15] at (0, 0.2) {addi x9,x0,0};
+
+    \foreach \i/\stage in {45/IF, 46/ID, 47/EX, 48/ME, 49/WB} {
+        \node[draw, fill=red!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i - 44.0, 1.0) {\tiny\stage};
+    }
+
+    % Fall-through instruction appears only in early stages and is flushed
+    \foreach \i/\stage in {46/IF, 47/ID} {
+        \node[draw, fill=gray!30, minimum width=0.8cm, minimum height=0.55cm, opacity=0.6] at (0.3 + 1.0*\i - 44.0, 0.2) {\tiny\stage};
+    }
+    \node[font=\scriptsize\color{red}, anchor=west] at (0.3 + 1.0*48 - 44.0, 0.2) {\textbf{Flushed}};
+
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -0.55) {\textbf{Legend:}};
+    \node[draw, fill=red!20, minimum width=0.7cm, minimum height=0.35cm, anchor=west] at (-1.3, -0.85) {};
+    \node[font=\scriptsize, anchor=west] at (-0.35, -0.85) {Branch instruction};
+    \node[draw, fill=gray!30, minimum width=0.7cm, minimum height=0.35cm, opacity=0.6, anchor=west] at (2.7, -0.85) {};
+    \node[font=\scriptsize, anchor=west] at (3.6, -0.85) {Flushed instruction};
+    \end{tikzpicture}
+    \caption{Taken\textendash branch control hazard: fall\textendash through instruction is fetched but flushed after \texttt{bne x15, x12, -16} redirects the PC.}
     \label{fig:control_hazard}
 \end{figure}
 
 \subsubsection{Structural hazard}
 The processor does not need to handle structural hazards since it has enough resources to execute all
-instructions without contention. For example, there are separate instruction and data memeory, so there
+instructions without contention. For example, there are separate instruction and data memory, so there
 are no structural hazards between instruction fetch and memory access stages. Also, there are enough
 functional units to handle all arithmetic and logic operations without contention.
 
@@ -248,30 +794,98 @@ The \texttt{ecall} row may show extra delay cycles (\texttt{-}) before completin
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_ecall_early.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_ecall_early.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: early trace showing the exit sequence. Save your screenshot as \texttt{img/crop\_ecall\_early.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.6cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+    \foreach \i in {0,...,4} {
+        \node[cycle] at (0.3 + 1.0*\i, 1.6) {C\i};
     }
-    \caption{Exit sequence visible in an early trace window: \texttt{addi x17, x0, 10} followed by \texttt{ecall}. The \texttt{addi} sets the environment\textendash call selector register (\texttt{a7/x17}) before the terminating \texttt{ecall} is issued.}
+
+    \node[instruction, anchor=east, fill=cyan!10] at (0, 1.0) {addi x17,x0,10};
+    \node[instruction, anchor=east, fill=gray!15] at (0, 0.2) {ecall};
+
+    % Early trace window (as in screenshot): addi visible at IF then ID; ecall just fetched
+    \foreach \i/\stage in {3/IF, 4/ID} {
+        \node[draw, fill=cyan!20, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i, 1.0) {\tiny\stage};
+    }
+    \foreach \i/\stage in {4/IF} {
+        \node[draw, fill=gray!25, minimum width=0.8cm, minimum height=0.55cm] at (0.3 + 1.0*\i, 0.2) {\tiny\stage};
+    }
+    \end{tikzpicture}
+    \caption{Early exit sequence in the trace: \texttt{addi x17, x0, 10} then \texttt{ecall}.}
     \label{fig:ecall_early}
 \end{figure}
 
 \begin{figure}[H]
     \centering
-    \IfFileExists{img/crop_ecall_end.png}{%
-        \includegraphics[width=0.92\textwidth]{img/crop_ecall_end.png}%
-    }{%
-        \fbox{\parbox{0.9\textwidth}{Figure placeholder: final trace showing termination at the end of execution. Save your screenshot as \texttt{img/crop\_ecall\_end.png}.}}%
+    \begin{tikzpicture}[
+        scale=0.80,
+        transform shape,
+        instruction/.style={rectangle, draw, minimum width=3.2cm, minimum height=0.65cm, font=\ttfamily\scriptsize},
+        cycle/.style={font=\scriptsize\bfseries}
+    ]
+
+    % Cycle numbers: C58990 through C58998 (9 cycles)
+    \foreach \i [count=\ci from 1] in {58990,58991,58992,58993,58994,58995,58996,58997} {
+        \node[cycle] at (0.3 + 1.3*\ci, 1.6) {C\i};
     }
-    \caption{End of execution: the final \texttt{addi x17, x0, 10} and \texttt{ecall} sequence appears in the pipeline trace. After \texttt{ecall} is executed, Ripes halts the simulation and reports program completion.}
-    \label{fig:ecall_end}
+
+    % Instruction labels (anchor=east, left of diagram)
+    \node[instruction, anchor=east, fill=blue!10]   at (0, 1.0)  {addi x17, x0, 10};
+    \node[instruction, anchor=east, fill=green!10] at (0, 0.2)  {ecall};
+    \node[instruction, anchor=east, fill=cyan!10]    at (0, -0.6) {lw x1, 12(x2)};
+    \node[instruction, anchor=east, fill=yellow!10]  at (0, -1.4) {addi x2, x2, 16};
+
+    % --------------------------------------------------
+    % addi x17, x0, 10
+    % C58990=IF(1), C58991=ID(2), C58992=EX(3), C58993=MEM(4), C58994=WB(5)
+    \foreach \ci/\stage in {1/IF, 2/ID, 3/EX, 4/MEM, 5/WB} {
+        \node[draw, fill=blue!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, 1.0) {\tiny\stage};
+    }
+
+    % --------------------------------------------------
+    % ecall
+    % C58991=IF(2), C58992=ID(3), C58993=EX(4), C58994=-(5), C58995=-(6), C58996=MEM(7), C58997=WB(8)
+    \foreach \ci/\stage in {2/IF, 3/ID, 4/EX, 5/{-}, 6/{-}, 7/MEM, 8/WB} {
+        \node[draw, fill=green!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, 0.2) {\tiny\stage};
+    }
+
+    % --------------------------------------------------
+    % lw x1, 12(x2)
+    % C58992=IF(3), C58993=ID(4), C58994=-(5)
+    \foreach \ci/\stage in {3/IF, 4/ID, 5/{-}} {
+        \node[draw, fill=cyan!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, -0.6) {\tiny\stage};
+    }
+
+    % --------------------------------------------------
+    % addi x2, x2, 16
+    % C58993=IF(4), C58994=-(5)
+    \foreach \ci/\stage in {4/IF, 5/{-}} {
+        \node[draw, fill=yellow!20, minimum width=1cm, minimum height=0.55cm]
+            at (0.3 + 1.3*\ci, -1.4) {\tiny\stage};
+    }
+
+    % Legend
+    \node[font=\scriptsize\bfseries, anchor=north west] at (-2.8, -2.2) {\textbf{Legend:}};
+    \node[draw, fill=green!20, minimum width=0.7cm, minimum height=0.35cm, anchor=west] at (-1.3, -2.55) {};
+    \node[font=\scriptsize, anchor=west] at (-0.35, -2.55) {ecall (syscall)};
+    \node[font=\scriptsize, anchor=west] at (2.8, -2.55) {- = Pipeline stall};
+
+    \end{tikzpicture}
+    \caption{End of execution: final \texttt{addi x17, x0, 10} and \texttt{ecall} in the trace (simulation halts after \texttt{ecall}).}
+    \label{fig:ecall_pipeline}
 \end{figure}
 
 \section{Branches and Multiple-Issue}
 
-This section examines the performance of two pipelined processor 
-configurations—a 5-stage single-issue and a 6-stage dual-issue 
+This section examines the performance of two pipelined processor
+configurations—a 5-stage single-issue and a 6-stage dual-issue
 processor—by simulating the execution of an insertion sort ELF binary.
 The analysis focuses on pipeline stalls, branch handling, data hazards,
 and overall CPI efficiency. Through systematic observation
@@ -298,8 +912,8 @@ The pipeline consists of the following stages:
     \item \textbf{Write Back (WB):} Write results back to the register file.
 \end{enumerate}
 
-This design aims to achieve a throughput of one instruction per cycle (CPI = 1.0). However, 
-hazards disrupt this flow, causing stalls and flushes that degrade performance, as observed 
+This design aims to achieve a throughput of one instruction per cycle (CPI = 1.0). However,
+hazards disrupt this flow, causing stalls and flushes that degrade performance, as observed
 in the following analysis.
 \subsubsection{Incomplete Instructions in the Pipeline}
 
@@ -416,17 +1030,17 @@ Additionally, the pipeline diagram reveals \textbf{pipeline stalls} (indicated b
 
 \subsubsection{Branch Prediction Mechanism}
 Based on the observed pipeline behavior of the first loop in \texttt{< main >} (Figure \ref{fig:branch_flushing_extended} ), the processor does \textbf{not appear to have a sophisticated branch predictor}.
-The consistent pattern of pipeline flushing observed across all branch instructions indicates the absence of a dynamic branch predictor in this processor design. This conclusion is supported by several key observations:
+The consistent patterns observed across all branch instructions indicates the absence of a dynamic branch predictor in this processor design. This conclusion is supported by several key observations:
 \begin{itemize}
-    \item \textbf{Consistent Flushing Pattern}: Every taken branch exhibits identical flushing behavior, regardless of execution history. This suggests a static approach rather than adaptive learning.
-    
+    \item \textbf{Flushing Pattern}: Every taken branch exhibits identical flushing behavior, regardless of execution history. This suggests a static approach rather than adaptive learning.
+
     \item \textbf{No Learning Observed}: In a typical dynamic branch predictor (such as a two-bit saturating counter or branch history table), we would expect:
     \begin{enumerate}
         \item \textbf{Initial iterations}: Flushes would occur as the predictor learns branch behavior
         \item \textbf{Subsequent iterations}: After 2 executions, the predictor would accurately predict the branch direction, eliminating flushes
     \end{enumerate}
     The insertion sort algorithm contains loop branches that are typically taken many times consecutively. A competent dynamic predictor would quickly learn this pattern and avoid flushing after the initial learning phase.
-    
+
     \item \textbf{Statistical Evidence}: Analysis of the pipeline trace reveals that branches exhibit the same 2-cycle penalty (flushing 2 instructions) throughout execution, with no improvement over time. This static penalty pattern is characteristic of processors without branch prediction or with always-not-taken static prediction.
 \end{itemize}
 
@@ -440,10 +1054,10 @@ To illustrate what we would expect with a dynamic branch predictor, consider the
 \begin{tabular}{|c|c|c|c|c|}
 \hline
 \rowcolor{blue!20}
-\textbf{Branch Iteration} & 
-\textbf{Predicted Outcome} & 
-\textbf{Actual Outcome} & 
-\textbf{Pipeline Flush} & 
+\textbf{Branch Iteration} &
+\textbf{Predicted Outcome} &
+\textbf{Actual Outcome} &
+\textbf{Pipeline Flush} &
 \textbf{Predictor State Update} \\
 \hline
 \rowcolor{red!30}
@@ -673,7 +1287,7 @@ Since our observations show \textbf{consistent flushing across all iterations}, 
 
 
 \subsubsection{Optimal CPI}
-The optimal Cycles Per Instruction (CPI) for a simple 5-stage scalar pipelined processor is \textbf{1.0}. In an ideal scenario without hazards, each stage of the pipeline is fully utilized and the processor can complete and retire a new instruction on every clock cycle. This is achieved by overlapping the execution of instructions across the five stages (IF, ID, EX, ME, WB).
+The optimal Cycles Per Instruction (CPI) for a simple 5-stage pipelined processor is \textbf{1.0} \cite{patterson_hennessy_cod_riscv}. In an ideal scenario without hazards, each stage of the pipeline is fully utilized and the processor can complete and retire a new instruction on every clock cycle. This is achieved by overlapping the execution of instructions across the five stages (IF, ID, EX, ME, WB).
 
 \subsubsection{Analysis of Observed Performance}
 The simulation of the insertion sort program yielded an observed CPI of \textbf{1.38}. This significant deviation from the optimal value of 1.0 indicates that pipeline hazards cause the processor to stall or flush for approximately 38\% of the total cycles. The performance penalty can be attributed to the two primary types of pipeline hazards present in the code.
@@ -711,7 +1325,7 @@ The lecture provides a theoretical analysis of processor performance based on a 
     \item A base CPI of 1.0 for arithmetic and other instructions .
 \end{itemize}
 
-The observed CPI for the insertion sort program (\textbf{1.38}) is slightly better (lower) than the lecture's theoretical average (\textbf{1.47}). 
+The observed CPI for the insertion sort program (\textbf{1.38}) is slightly better (lower) than the lecture's theoretical average (\textbf{1.47}).
 This discrepancy suggests that the specific instruction mix of the  insertion sort  is more efficient than the generic benchmark assumed in the lecture. Specifically, the insertion sort implementation likely contains a higher proportion of "safe" arithmetic/logic instructions relative to expensive control flow or load-use hazards, or the specific arrangement of instructions allows for fewer data stalls than the 11\% assumed in the general model.
 
 \subsection{6-stage dual issue processor}
@@ -791,44 +1405,44 @@ Figure~\ref{fig:dual_issue_hazards} illustrates the detailed timing behavior of 
 \foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB} \node[stage, fill=orange!20] at (1.4*\c, 0) {\s};
 
 % lw x13 0 x15
-\foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB, 8/IF, 9/ID, 10/II, 11/EX, 12/MEM, 13/WB, 16/IF, 17/ID, 18/II, 19/EX, 20/MEM, 21/WB , 24/IF ,25/ID} 
+\foreach \c/\s in {1/IF, 2/ID, 3/II, 4/EX, 5/MEM, 6/WB, 8/IF, 9/ID, 10/II, 11/EX, 12/MEM, 13/WB, 16/IF, 17/ID, 18/II, 19/EX, 20/MEM, 21/WB , 24/IF ,25/ID}
     \node[stage, fill=blue!20] at (1.4*\c, -1*1.2) {\s};
 
 % sw x13 0 x14
-\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/{IF/WB}, 9/ID, 10/-, 11/II, 12/-, 13/EX, 14/MEM, 15/WB, 16/IF, 17/ID, 18/-, 19/II, 20/-, 21/EX,22/MEM , 23/WB ,23/WB ,24/IF ,25/ID} 
+\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/{IF/WB}, 9/ID, 10/-, 11/II, 12/-, 13/EX, 14/MEM, 15/WB, 16/IF, 17/ID, 18/-, 19/II, 20/-, 21/EX,22/MEM , 23/WB ,23/WB ,24/IF ,25/ID}
     \node[stage, fill=green!20] at (1.4*\c, -2*1.2) {\s};
 
 % addi x15 x15 4
-\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/WB, 9/IF, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF} 
+\foreach \c/\s in {2/IF, 3/ID, 4/II, 5/-, 6/EX, 7/MEM, 8/WB, 9/IF, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF}
     \node[stage, fill=cyan!20] at (1.4*\c, -3*1.2) {\s};
 
 % addi x14 x14 4
-\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/{IF/WB}, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF} 
+\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/{IF/WB}, 10/-, 11/ID, 12/-, 13/II, 14/EX, 15/MEM, 16/WB, 17/IF, 18/-, 19/ID, 20/-, 21/II, 22/EX , 23/MEM ,24/WB ,25/IF}
     \node[stage, fill=yellow!20] at (1.4*\c, -4*1.2) {\s};
 
 % bne x15 x12 -16
-\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/WB, 11/IF, 12/-, 13/ID, 14/II, 15/EX, 16/MEM, 17/WB, 19/IF, 20/-, 21/ID, 22/II, 23/EX, 24/MEM, 25/WB} 
+\foreach \c/\s in {3/IF, 4/ID, 5/-, 6/II, 7/EX, 8/MEM, 9/WB, 11/IF, 12/-, 13/ID, 14/II, 15/EX, 16/MEM, 17/WB, 19/IF, 20/-, 21/ID, 22/II, 23/EX, 24/MEM, 25/WB}
     \node[stage, fill=red!20] at (1.4*\c, -5*1.2) {\s};
 
 % --- Instructions Flushed (Grisées) ---
 % addi x9
-\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 11/IF, 12/-, 13/ID, 14/-, 15/II, 19/IF, 20/-, 21/ID, 22/-, 23/II} 
+\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 11/IF, 12/-, 13/ID, 14/-, 15/II, 19/IF, 20/-, 21/ID, 22/-, 23/II}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -6*1.2) {\s};
 
 % addi x19
-\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID} 
+\foreach \c/\s in {4/IF, 5/-, 6/ID, 7/II, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -7*1.2) {\s};
 
 % addi x18
-\foreach \c/\s in {6/IF, 7/ID, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID} 
+\foreach \c/\s in {6/IF, 7/ID, 13/IF, 14/-, 15/ID, 21/IF, 22/-, 23/ID}
     \node[stage,fill=gray!30 ,opacity=0.6] at (1.4*\c, -8*1.2) {\s};
 
 % sub x11
-\foreach \c/\s in {6/IF, 7/ID, 15/IF, 23/IF} 
+\foreach \c/\s in {6/IF, 7/ID, 15/IF, 23/IF}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -9*1.2) {\s};
 
 % addi x10
-\foreach \c/\s in {7/IF, 15/IF, 23/IF} 
+\foreach \c/\s in {7/IF, 15/IF, 23/IF}
     \node[stage, fill=gray!30 ,opacity=0.6] at (1.4*\c, -10*1.2) {\s};
 
 % jal x1
@@ -852,7 +1466,7 @@ Figure~\ref{fig:dual_issue_hazards} illustrates the detailed timing behavior of 
 \caption{Pipeline behavior during the array copy loop.}
 \label{fig:dual_issue_hazards}
 \end{figure}
-A dominant factor limiting parallelism is the presence of data dependencies (RAW hazards). For instance, the instruction:
+A dominant factor limiting parallelism is the presence of data dependencies \cite{wall_ilp}. For instance, the instruction:
 
 \begin{lstlisting}[style=mystyle]
 lw x13, 0(x15)
@@ -911,33 +1525,32 @@ The theoretical optimal CPI of 0.5 assumes that two independent instructions are
 
 In practice, these conditions are not satisfied. The workload exposes limited parallelism, branch behavior introduces control penalties and structural constraints restrict simultaneous execution of certain instruction classes. Consequently, the observed CPI of 1.26 reflects a realistic balance between architectural capability and workload characteristics.
 
-This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it. 
+This analysis highlights an important architectural insight: increasing issue width does not automatically guarantee proportional performance improvement. The effectiveness of dual-issue execution depends strongly on the inherent parallelism of the workload and the sophistication of the microarchitectural mechanisms used to exploit it.
 
 \subsubsection{Comparison with 5-Stage Processor}
 Table~\ref{tab:processor_comparison} presents a comparison between the classical 5-stage pipeline and the 6-stage dual-issue architecture. Although the dual-issue processor offers a theoretical CPI of 0.5 compared to 1.0 for the single-issue design, this ideal 2× speedup is not achieved in practice.
 
-The measured CPI decreases from 1.38 to 1.26, corresponding to an improvement of about 9\%. Similarly,indicating that the second issue slot is utilized in some cycles but remains frequently underused. This confirms that the workload exposes limited Instruction-Level Parallelism (ILP), preventing full exploitation of the dual-issue capability.
+The measured CPI decreases from 1.38 to 1.26, corresponding to an improvement of about 9\%. Similarly, indicating that the second issue slot is utilized in some cycles but remains frequently underused. This confirms that the workload exposes limited Instruction-Level Parallelism (ILP), preventing full exploitation of the dual-issue capability.
 It is also important to note that the branch penalty increases from 2 cycles to 3 cycles due to the deeper pipeline. As a result, control hazards become slightly more expensive, partially offsetting the throughput gains provided by dual issue.
 
 
 \begin{table}[H]
 \centering
 \renewcommand{\arraystretch}{1.4}
+\rowcolors{2}{gray!10}{white}
 \begin{tabular}{|p{0.2\textwidth}|p{0.2\textwidth}|p{0.2\textwidth}|p{0.2\textwidth}|}
 \hline
 \rowcolor{blue!20}
 \textbf{Metric} & \textbf{5-Stage} & \textbf{6-Stage Dual-Issue} & \textbf{Improvement} \\
 \hline
-Theoretical CPI & 1.0 & 0.5 & 2.0× \\
-Achieved CPI & 1.38 & 1.26 & 1.09× \\
-Branch Penalty & 2 cycles & 3 cycles & Worse \\
+Theoretical CPI & 1.0 & 0.5 & -2.0\% \\
+Achieved CPI & 1.38 & 1.26 & -1.09\% \\ 
+Branch Penalty & 2 cycles & 3 cycles & +1.5\% \\
 \hline
 \end{tabular}
 \caption{Performance comparison between processor configurations}
 \label{tab:processor_comparison}
 \end{table}
-
-
 
 
 
@@ -1466,8 +2079,116 @@ Overall, while the cache configuration benefits from spatial and temporal locali
 
 
 
+\subsection{Cache miss}
+In this subsection we are focusing in on illustrating different scenarios of cache misses (compulsory,
+capacity and conflict) using the \textbf{Ripes} simulator. Compulsory misses are the type of cache miss
+which occurs when a block of data is accessed for the first time and has never been loaded into the cache.
+This kind of miss is unavoidable and occurs in any configuration of cache.
 
-\end{document}
+For example for a data cache configuration of 1KB total size with 2 lines, 4 way associative and block
+sizes of 16 bytes exhibits a compulsory miss when the \textbf{sw x1 12 x2} instruction is executed from
+the \_start function, as depicted in \ref{fig:compulsory_miss}. Another example of compulsory miss would
+happen when the program reaches main and the processor executes \textbf{sw x1 428 x2}.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/compulsory-cache-miss.png}
+    \caption{Compulsory miss on data cache when executing \_start function}
+    \label{fig:compulsory_miss}
+\end{figure}
+
+When speaking of conflict misses, they occur when multiple blocks of data compete for the same cache line due to
+the cache's mapping scheme. For instance, in a direct-mapped cache, if two different memory addresses map to the same
+cache line, they will evict each other, leading to conflict misses.
+
+In an instruction cache configuration of 47B with 2 lines, 2 way associative and 2 blocks the following
+instructions will cause conflict misses, as per figure \ref{fig:conflict_miss}:
+
+\begin{lstlisting}
+	10184:	addi x2 x2 -16
+        100f0:	sw x18 416 x2
+\end{lstlisting}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/conflict-cache-miss.png}
+    \caption{Conflict miss on instruction cache when executing \_start and main functions}
+    \label{fig:conflict_miss}
+\end{figure}
+
+\newpage
+Finally, capacity misses occur when the cache cannot contain all the blocks needed during execution, even if there are no conflicts.
+This happens when the working set of the program exceeds the total cache size. For example, if we have a data
+cache of 1KB total size with 2 lines, 4 way associative and block sizes of 16 bytes, and the program accesses
+more than 64 bytes of data (which is the total capacity of the cache), it will result in capacity misses.
+
+This is illustrated in figure \ref{fig:capacity_miss} when the program executes the following instructions:
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/capacity-cache-miss.png}
+    \caption{Capacity miss on data cache when executing main functions}
+    \label{fig:capacity_miss}
+\end{figure}
+
+\newpage
+\subsection{Write Allocate vs No Write Allocate}
+
+When using write allocate (WA), the cache line is loaded into the cache on a write miss before the
+store operation is performed. A concrete example of this behavior can be observed when copying data
+from the input array to the buf array in the first loop of the main function. Consider the first store
+to a new line of the destination. Destination addresses written: $D+0$, $D+4$, $D+8$, $D+12$, $D+16$, ...
+
+For the first store to $D+0$:
+\begin{itemize}
+    \item \texttt{sw D+0} $\rightarrow$ write miss
+    \item With WA: cache fetches whole line into L1
+    \item Then performs store into the line $\rightarrow$ line is now dirty
+    \item The next stores ($D+4$, $D+8$ ...) are write hits (fast, no extra line fetches)
+\end{itemize}
+
+So per 16B line, you pay one line fill, then get cheap hits.
+
+When using no write allocate (NWA), the cache does not load the line on a write miss. Instead, it
+writes the data directly to memory. Therefore, this will yield to a different cost per write in the
+case of the above mentioned for loop.
+
+First store to $D+0$:
+\begin{itemize}
+    \item \texttt{sw D+0} $\rightarrow$ write miss
+    \item With NWA: do not load the line
+    \item The word is written to memory
+\end{itemize}
+
+Next store to $D+4$:
+\begin{itemize}
+    \item still a miss, still write-around
+\end{itemize}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/write-allocate.png}
+    \caption{WA: stack addresses appear, block 1 hit, by write-allocate}
+    \label{fig:write-allocate}
+\end{figure}
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/write-allocate-2.png}
+    \caption{WA: stack addresses appear, block 0 miss, compulsory}
+    \label{fig:write-allocate-2}
+\end{figure}
+
+In the next figure the NWA policy is illustrated. As it can be seen no stack addresses appear, even if
+the same instructions are executed. This is because the cache is not loading the line on a write miss,
+but instead writing directly to memory.
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.9\linewidth]{img/no-write-allocate.png}
+    \caption{NWA: no stack addresses appear, all writes are cache miss}
+    \label{fig:no-write-allocate}
+\end{figure}
+
 
 
 
@@ -1475,8 +2196,10 @@ Overall, while the cache configuration benefits from spatial and temporal locali
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SECTION BIBLIOGRAPHY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+\clearpage
 
 \newpage % keep bibliography on a new page
+
 \bibliographystyle{plain}   % choose a style
 \bibliography{ref}      % name of .bib file (no .bib extension)
 
