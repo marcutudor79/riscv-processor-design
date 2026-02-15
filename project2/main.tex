@@ -2173,6 +2173,14 @@ but instead writing directly to memory.
     \label{fig:no-write-allocate}
 \end{figure}
 
+\section{conclusion}
+This report presented a comprehensive analysis of a RISC-V implementation of insertion sort using the Ripes simulator, examining the interaction between software and hardware across pipeline execution, multiple-issue architectures, and cache hierarchy.
+
+Pipeline analysis of the 5-stage design showed a CPI of 1.38, exceeding the theoretical optimum due to load-use hazards requiring one-cycle stalls and taken branches incurring two-cycle flushes—hazards inherent to the algorithm's tight dependency chains and loop-intensive structure. The 6-stage dual-issue processor achieved a CPI of 1.26, an $8.7\%$ improvement that falls significantly short of the theoretical 2× speedup. This marginal gain underscores a fundamental architectural principle: increasing issue width alone cannot overcome software-imposed limitations, as the workload's sequential data dependencies and control flow patterns expose insufficient instruction-level parallelism.
+
+Cache analysis introduced an efficiency metric combining miss rate and hardware size to evaluate design trade-offs. For instruction caches, minimizing misses proved more valuable than reducing size, while moderate 128-word block configurations achieved optimal efficiency for data caches. The derived working set expression $2N + 7$ provides a practical tool for cache sizing based on input dimensions.
+
+These findings reinforce that processor design involves inherent compromises between performance and complexity. The modest gains from dual-issue execution and the cache efficiency trade-offs observed demonstrate that optimal hardware configurations depend fundamentally on workload characteristics,highlighting that there is no universal architectural solution.
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % SECTION BIBLIOGRAPHY
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
